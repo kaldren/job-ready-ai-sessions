@@ -1,4 +1,3 @@
-
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -19,9 +18,10 @@ export interface JobData {
 
 interface JobSelectionProps {
   onJobSelect: (jobData: JobData) => void
+  onViewHistory: () => void
 }
 
-const JobSelection = ({ onJobSelect }: JobSelectionProps) => {
+const JobSelection = ({ onJobSelect, onViewHistory }: JobSelectionProps) => {
   const [title, setTitle] = useState('')
   const [level, setLevel] = useState('')
   const [industry, setIndustry] = useState('')
