@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -63,7 +64,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
   const { toast } = useToast()
   const { saveSession } = useInterviewSessions()
   const { user: clerkUser } = useUser()
-  const { selectedLanguage } = useLanguage()
+  const { selectedLanguage, t } = useLanguage()
   
   // Voice recording functionality
   const { isRecording, isTranscribing, startRecording, stopRecording, cancelRecording } = useVoiceRecording()
@@ -109,26 +110,29 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
         setQuestionStartTime(new Date())
         
         toast({
-          title: "Questions Generated",
-          description: `Generated ${data.questions.length} personalized questions in ${selectedLanguage.nativeName}`,
+          title: t('Questions Generated'),
+          description: t('Generated {count} personalized questions in {language}', {
+            count: data.questions.length,
+            language: selectedLanguage.nativeName
+          }),
         })
 
       } catch (error) {
         console.error('Error generating questions:', error)
         toast({
-          title: "Error",
-          description: "Failed to generate questions. Using fallback questions.",
+          title: t('Error'),
+          description: t('Failed to generate questions. Using fallback questions.'),
           variant: "destructive",
         })
         
         // Fallback to basic questions if API fails
         setQuestions([
-          `Tell me about yourself and why you're interested in the ${jobData.title} position.`,
-          `What experience do you have that makes you suitable for this ${jobData.level} role?`,
-          `Describe a challenging project you worked on in the ${jobData.industry} industry.`,
-          "What are your greatest strengths and how do they apply to this role?",
-          "Where do you see yourself in 5 years?",
-          "Do you have any questions for us?"
+          `${t('Tell us about yourself and why you\'re interested in the')} ${jobData.title} ${t('position')}.`,
+          `${t('What experience do you have that makes you suitable for this')} ${jobData.level} ${t('role')}?`,
+          `${t('Describe a challenging project you worked on in the')} ${jobData.industry} ${t('industry')}.`,
+          t('What are your greatest strengths and how do they apply to this role?'),
+          t('Where do you see yourself in 5 years?'),
+          t('Do you have any questions for us?')
         ])
       } finally {
         setIsLoadingQuestions(false)
@@ -136,7 +140,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
     }
 
     generateQuestions()
-  }, [jobData, toast, resumeSession, selectedLanguage])
+  }, [jobData, toast, resumeSession, selectedLanguage, t])
 
   const generateInstantFeedback = async (question: string, userAnswer: string) => {
     if (!instantFeedbackEnabled || !userAnswer.trim()) return
@@ -149,7 +153,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
           jobLevel: jobData.level,
           jobIndustry: jobData.industry,
           question,
-          answer: userAnswer,
+          answer: userAnswer,  
           language: selectedLanguage.code,
           languageName: selectedLanguage.nativeName
         }
@@ -293,10 +297,10 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
       }
 
       toast({
-        title: "Session Paused",
+        title: t('Session Paused'),
         description: pausedSessionId 
-          ? "Your interview progress has been updated" 
-          : "Your interview has been saved and can be resumed from history",
+          ? t('Your interview progress has been updated')
+          : t('Your interview has been saved and can be resumed from history'),
       })
 
       setIsPaused(true)
@@ -305,8 +309,8 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
       console.error('Error in handlePauseSession:', error)
       console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
       toast({
-        title: "Error",
-        description: `Failed to pause session: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        title: t('Error'),
+        description: t('Failed to pause session: {error}', { error: error instanceof Error ? error.message : 'Unknown error' }),
         variant: "destructive",
       })
     }
@@ -371,15 +375,15 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
         <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
           <CardContent className="py-16">
             <Pause className="w-16 h-16 mx-auto text-blue-600 mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Interview Paused</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('Interview Paused')}</h2>
             <p className="text-gray-600 mb-6">
-              Your interview session has been saved and can be resumed from your interview history.
+              {t('Your interview session has been saved and can be resumed from your interview history.')}
             </p>
             <Button 
               onClick={() => window.location.reload()} 
               className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white"
             >
-              Return to Main Menu
+              {t('Return to Main Menu')}
             </Button>
           </CardContent>
         </Card>
@@ -391,7 +395,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
     return (
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Preparing Your Interview</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('Preparing Your Interview')}</h2>
           <div className="flex items-center justify-center space-x-4 text-sm text-gray-600">
             <Badge variant="outline" className="bg-blue-50">
               {jobData.title}
@@ -409,12 +413,12 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
           <CardContent className="flex flex-col items-center justify-center py-16">
             <Loader2 className="w-12 h-12 animate-spin text-blue-600 mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              {resumeSession ? 'Resuming Interview Session' : 'Generating Personalized Questions'}
+              {resumeSession ? t('Resuming Interview Session') : t('Generating Personalized Questions')}
             </h3>
             <p className="text-gray-600 text-center max-w-md">
               {resumeSession 
-                ? 'Loading your previous interview session...'
-                : 'Creating 30+ tailored interview questions based on your role, experience level, and industry...'
+                ? t('Loading your previous interview session...')
+                : t('Creating 30+ tailored interview questions based on your role, experience level, and industry...')
               }
             </p>
           </CardContent>
@@ -427,7 +431,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
     <div className="max-w-4xl mx-auto">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-gray-900 mb-2">
-          {resumeSession ? 'Resuming Interview' : 'Interview in Progress'}
+          {resumeSession ? t('Resuming Interview') : t('Interview in Progress')}
         </h2>
         <div className="flex items-center justify-center space-x-4 text-sm text-gray-600">
           <Badge variant="outline" className="bg-blue-50">
@@ -447,7 +451,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
           <div className="flex items-center justify-between">
             <CardTitle className="flex items-center space-x-2">
               <Clock className="w-5 h-5" />
-              <span>Question {currentQuestion + 1} of {questions.length}</span>
+              <span>{t('Question')} {currentQuestion + 1} {t('of')} {questions.length}</span>
             </CardTitle>
             <div className="flex items-center space-x-4">
               <div className="text-sm text-gray-500">
@@ -460,7 +464,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
                 className="flex items-center space-x-2"
               >
                 <Pause className="w-4 h-4" />
-                <span>Pause</span>
+                <span>{t('Pause')}</span>
               </Button>
             </div>
           </div>
@@ -470,9 +474,9 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
           <div className="flex items-center justify-between mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
             <div className="flex items-center space-x-2">
               <Zap className="w-4 h-4 text-amber-600" />
-              <span className="text-sm font-medium text-amber-800">Instant AI Feedback</span>
+              <span className="text-sm font-medium text-amber-800">{t('Instant AI Feedback')}</span>
               <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700">
-                Real-time
+                {t('Real-time')}
               </Badge>
             </div>
             <Switch
@@ -488,7 +492,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
                 <Bot className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Interviewer</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">{t('Interviewer')}</h3>
                 <p className="text-lg text-gray-800 leading-relaxed">
                   {questions[currentQuestion]}
                 </p>
@@ -501,11 +505,11 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
               <div className="flex-shrink-0 w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
                 <User className="w-5 h-5 text-gray-600" />
               </div>
-              <h3 className="font-semibold text-gray-900">Your Answer</h3>
+              <h3 className="font-semibold text-gray-900">{t('Your Answer')}</h3>
             </div>
             
             <Textarea
-              placeholder="Type your answer here... Take your time to think through your response."
+              placeholder={t('Type your answer here... Take your time to think through your response.')}
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
               className="min-h-32 text-base leading-relaxed"
@@ -520,15 +524,15 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
                   </div>
                   <div className="flex-1">
                     <h4 className="font-semibold text-purple-900 mb-2 flex items-center space-x-2">
-                      <span>AI Feedback</span>
+                      <span>{t('AI Feedback')}</span>
                       {isLoadingFeedback && <Loader2 className="w-4 h-4 animate-spin" />}
                     </h4>
                     {isLoadingFeedback ? (
-                      <p className="text-purple-700 italic">Analyzing your response...</p>
+                      <p className="text-purple-700 italic">{t('Analyzing your response...')}</p>
                     ) : instantFeedback ? (
                       <p className="text-purple-800 leading-relaxed">{instantFeedback}</p>
                     ) : (
-                      <p className="text-purple-700 italic">Start typing to get instant feedback on your answer...</p>
+                      <p className="text-purple-700 italic">{t('Start typing to get instant feedback on your answer...')}</p>
                     )}
                   </div>
                 </div>
@@ -549,17 +553,17 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
                 {isTranscribing ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Transcribing...</span>
+                    <span>{t('Transcribing...')}</span>
                   </>
                 ) : isRecording ? (
                   <>
                     <MicOff className="w-4 h-4" />
-                    <span>Stop Recording</span>
+                    <span>{t('Stop Recording')}</span>
                   </>
                 ) : (
                   <>
                     <Mic className="w-4 h-4" />
-                    <span>Voice Answer (20s max)</span>
+                    <span>{t('Voice Answer (20s max)')}</span>
                   </>
                 )}
               </Button>
@@ -572,12 +576,12 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
                 {currentQuestion < questions.length - 1 ? (
                   <>
                     <Send className="w-4 h-4 mr-2" />
-                    Next Question
+                    {t('Next Question')}
                   </>
                 ) : (
                   <>
                     <Send className="w-4 h-4 mr-2" />
-                    Complete Interview
+                    {t('Complete Interview')}
                   </>
                 )}
               </Button>
@@ -587,10 +591,10 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
       </Card>
 
       <div className="text-center text-sm text-gray-500">
-        <p>Take your time with each answer. You can pause anytime and resume later from your history!</p>
+        <p>{t('Take your time with each answer. You can pause anytime and resume later from your history!')}</p>
         {isRecording && (
           <p className="text-red-600 font-medium mt-2">
-            🔴 Recording... (stops automatically after 20 seconds)
+            🔴 {t('Recording... (stops automatically after 20 seconds)')}
           </p>
         )}
       </div>

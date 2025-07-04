@@ -7,6 +7,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Briefcase, Building, TrendingUp, History, Sparkles } from 'lucide-react'
 import LanguageSelector from '@/components/LanguageSelector'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface JobSelectionProps {
   onJobSelected: (jobData: JobData) => void
@@ -23,6 +24,7 @@ const JobSelection = ({ onJobSelected, onViewHistory }: JobSelectionProps) => {
   const [jobTitle, setJobTitle] = useState('')
   const [jobLevel, setJobLevel] = useState('')
   const [jobIndustry, setJobIndustry] = useState('')
+  const { t } = useLanguage()
 
   const handleStartInterview = () => {
     if (jobTitle && jobLevel && jobIndustry) {
@@ -33,7 +35,7 @@ const JobSelection = ({ onJobSelected, onViewHistory }: JobSelectionProps) => {
       }
       onJobSelected(jobData)
     } else {
-      alert('Please fill in all the fields')
+      alert(t('Please fill in all the fields'))
     }
   }
 
@@ -42,10 +44,10 @@ const JobSelection = ({ onJobSelected, onViewHistory }: JobSelectionProps) => {
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent mb-6">
-            AI Interview Practice
+            {t('AI Interview Practice')}
           </h1>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            Master your next interview with personalized AI feedback and real-time coaching
+            {t('Master your next interview with personalized AI feedback and real-time coaching')}
           </p>
         </div>
 
@@ -60,10 +62,10 @@ const JobSelection = ({ onJobSelected, onViewHistory }: JobSelectionProps) => {
           <CardHeader className="relative z-10 pb-8">
             <CardTitle className="text-3xl font-bold text-center flex items-center justify-center">
               <Sparkles className="w-8 h-8 mr-3 text-yellow-500" />
-              Tell us about the role
+              {t('Tell us about the role')}
             </CardTitle>
             <p className="text-center text-gray-600 mt-2">
-              We'll customize your interview experience based on this information
+              {t('We\'ll customize your interview experience based on this information')}
             </p>
           </CardHeader>
           <CardContent className="relative z-10 space-y-8">
@@ -71,11 +73,11 @@ const JobSelection = ({ onJobSelected, onViewHistory }: JobSelectionProps) => {
               <div className="space-y-3">
                 <Label htmlFor="job-title" className="text-lg font-semibold flex items-center">
                   <Briefcase className="w-5 h-5 mr-2 text-blue-600" />
-                  Job Title
+                  {t('Job Title')}
                 </Label>
                 <Input
                   id="job-title"
-                  placeholder="e.g. Software Engineer, Product Manager..."
+                  placeholder={t('e.g. Software Engineer, Product Manager...')}
                   value={jobTitle}
                   onChange={(e) => setJobTitle(e.target.value)}
                   className="h-12 text-lg border-2 focus:border-blue-400 transition-colors"
@@ -85,11 +87,11 @@ const JobSelection = ({ onJobSelected, onViewHistory }: JobSelectionProps) => {
               <div className="space-y-3">
                 <Label htmlFor="job-industry" className="text-lg font-semibold flex items-center">
                   <Building className="w-5 h-5 mr-2 text-green-600" />
-                  Industry
+                  {t('Industry')}
                 </Label>
                 <Input
                   id="job-industry"
-                  placeholder="e.g. Technology, Healthcare, Finance..."
+                  placeholder={t('e.g. Technology, Healthcare, Finance...')}
                   value={jobIndustry}
                   onChange={(e) => setJobIndustry(e.target.value)}
                   className="h-12 text-lg border-2 focus:border-green-400 transition-colors"
@@ -100,17 +102,17 @@ const JobSelection = ({ onJobSelected, onViewHistory }: JobSelectionProps) => {
             <div className="space-y-3">
               <Label htmlFor="job-level" className="text-lg font-semibold flex items-center">
                 <TrendingUp className="w-5 h-5 mr-2 text-purple-600" />
-                Experience Level
+                {t('Experience Level')}
               </Label>
               <Select onValueChange={setJobLevel}>
                 <SelectTrigger id="job-level" className="h-12 text-lg border-2 focus:border-purple-400">
-                  <SelectValue placeholder="Select your experience level" />
+                  <SelectValue placeholder={t('Select your experience level')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Entry Level" className="text-lg">Entry Level (0-2 years)</SelectItem>
-                  <SelectItem value="Mid Level" className="text-lg">Mid Level (2-5 years)</SelectItem>
-                  <SelectItem value="Senior Level" className="text-lg">Senior Level (5+ years)</SelectItem>
-                  <SelectItem value="Executive Level" className="text-lg">Executive Level</SelectItem>
+                  <SelectItem value="Entry Level" className="text-lg">{t('Entry Level (0-2 years)')}</SelectItem>
+                  <SelectItem value="Mid Level" className="text-lg">{t('Mid Level (2-5 years)')}</SelectItem>
+                  <SelectItem value="Senior Level" className="text-lg">{t('Senior Level (5+ years)')}</SelectItem>
+                  <SelectItem value="Executive Level" className="text-lg">{t('Executive Level')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -119,7 +121,7 @@ const JobSelection = ({ onJobSelected, onViewHistory }: JobSelectionProps) => {
               className="w-full h-14 text-xl font-bold bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200"
               onClick={handleStartInterview}
             >
-              Start Your AI Interview
+              {t('Start Your AI Interview')}
             </Button>
           </CardContent>
         </Card>
@@ -132,7 +134,7 @@ const JobSelection = ({ onJobSelected, onViewHistory }: JobSelectionProps) => {
             className="bg-white/80 backdrop-blur-sm hover:bg-white border-2 px-8 py-3"
           >
             <History className="w-5 h-5 mr-2" />
-            View Interview History
+            {t('View Interview History')}
           </Button>
         </div>
       </div>
