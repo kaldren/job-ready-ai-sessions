@@ -59,6 +59,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
   const instantFeedbackEnabled = jobData.instantFeedbackEnabled || false
   const [instantFeedback, setInstantFeedback] = useState<string>('')
   const [isLoadingFeedback, setIsLoadingFeedback] = useState(false)
+  const [hasFeedbackBeenGenerated, setHasFeedbackBeenGenerated] = useState(false)
   const { toast } = useToast()
   const { saveSession } = useInterviewSessions()
   const { user: clerkUser } = useUser()
@@ -140,8 +141,8 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
     generateQuestions()
   }, [jobData, toast, resumeSession, selectedLanguage, t])
 
-  const generateInstantFeedback = async (question: string, userAnswer: string) => {
-    if (!instantFeedbackEnabled || !userAnswer.trim()) return
+  const generateInstantFeedback = async () => {
+    if (!instantFeedbackEnabled || !answer.trim() || hasFeedbackBeenGenerated) return
 
     setIsLoadingFeedback(true)
     try {
@@ -150,8 +151,8 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
           jobTitle: jobData.title,
           jobLevel: jobData.level,
           jobIndustry: jobData.industry,
-          question,
-          answer: userAnswer,  
+          question: questions[currentQuestion],
+          answer: answer,  
           language: selectedLanguage.code,
           languageName: selectedLanguage.nativeName
         }
@@ -164,6 +165,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
 
       if (data?.feedback) {
         setInstantFeedback(data.feedback)
+        setHasFeedbackBeenGenerated(true)
       }
     } catch (error) {
       console.error('Error generating instant feedback:', error)
@@ -171,17 +173,6 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
       setIsLoadingFeedback(false)
     }
   }
-
-  // Generate feedback when answer changes (debounced)
-  useEffect(() => {
-    if (!instantFeedbackEnabled || !answer.trim() || isLoadingQuestions) return
-
-    const timeoutId = setTimeout(() => {
-      generateInstantFeedback(questions[currentQuestion], answer)
-    }, 2000) // 2 second delay after user stops typing
-
-    return () => clearTimeout(timeoutId)
-  }, [answer, instantFeedbackEnabled, questions, currentQuestion, isLoadingQuestions])
 
   const progress = questions.length > 0 ? ((currentQuestion + 1) / questions.length) * 100 : 0
 
@@ -323,6 +314,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
     setQuestionTimes(newTimes)
     setAnswer('')
     setInstantFeedback('') // Clear feedback for next question
+    setHasFeedbackBeenGenerated(false) // Reset feedback state for next question
 
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1)
@@ -346,6 +338,8 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
   }
 
   const toggleRecording = async () => {
+    if (hasFeedbackBeenGenerated) return // Disable if feedback already generated
+    
     if (isRecording) {
       const transcribedText = await stopRecording()
       if (transcribedText) {
@@ -506,26 +500,41 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
               value={answer}
               onChange={(e) => setAnswer(e.target.value)}
               className="min-h-32 text-base leading-relaxed"
+              disabled={hasFeedbackBeenGenerated}
             />
 
             {/* Instant Feedback Display */}
-            {instantFeedbackEnabled && (answer.trim() || isLoadingFeedback) && (
+            {instantFeedbackEnabled && (
               <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl border border-purple-200">
                 <div className="flex items-start space-x-3">
                   <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center">
                     <MessageSquare className="w-4 h-4 text-white" />
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-semibold text-purple-900 mb-2 flex items-center space-x-2">
-                      <span>{t('AI Feedback')}</span>
-                      {isLoadingFeedback && <Loader2 className="w-4 h-4 animate-spin" />}
-                    </h4>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold text-purple-900 flex items-center space-x-2">
+                        <span>{t('AI Feedback')}</span>
+                        {isLoadingFeedback && <Loader2 className="w-4 h-4 animate-spin" />}
+                      </h4>
+                      {!hasFeedbackBeenGenerated && answer.trim() && (
+                        <Button
+                          size="sm"
+                          onClick={generateInstantFeedback}
+                          disabled={isLoadingFeedback}
+                          className="bg-purple-600 hover:bg-purple-700 text-white text-xs px-3 py-1"
+                        >
+                          {isLoadingFeedback ? t('Analyzing...') : t('Get AI Feedback')}
+                        </Button>
+                      )}
+                    </div>
                     {isLoadingFeedback ? (
                       <p className="text-purple-700 italic">{t('Analyzing your response...')}</p>
                     ) : instantFeedback ? (
                       <p className="text-purple-800 leading-relaxed">{instantFeedback}</p>
                     ) : (
-                      <p className="text-purple-700 italic">{t('Start typing to get instant feedback on your answer...')}</p>
+                      <p className="text-purple-700 italic">
+                        {answer.trim() ? t('Click the button above to get AI feedback on your answer') : t('Start typing your answer to enable AI feedback...')}
+                      </p>
                     )}
                   </div>
                 </div>
@@ -536,10 +545,11 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
               <Button
                 variant="outline"
                 onClick={toggleRecording}
-                disabled={isTranscribing}
+                disabled={isTranscribing || hasFeedbackBeenGenerated}
                 className={`flex items-center space-x-2 ${
                   isRecording ? 'text-red-600 border-red-200 bg-red-50' : 
                   isTranscribing ? 'text-blue-600 border-blue-200 bg-blue-50' : 
+                  hasFeedbackBeenGenerated ? 'opacity-50 cursor-not-allowed' :
                   'text-gray-600'
                 }`}
               >
