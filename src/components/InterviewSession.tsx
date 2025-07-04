@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -60,6 +61,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
   const [instantFeedback, setInstantFeedback] = useState<string>('')
   const [isLoadingFeedback, setIsLoadingFeedback] = useState(false)
   const [hasFeedbackBeenGenerated, setHasFeedbackBeenGenerated] = useState(false)
+  const [hasUsedVoiceForCurrentQuestion, setHasUsedVoiceForCurrentQuestion] = useState(false)
   const { toast } = useToast()
   const { saveSession } = useInterviewSessions()
   const { user: clerkUser } = useUser()
@@ -315,6 +317,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
     setAnswer('')
     setInstantFeedback('') // Clear feedback for next question
     setHasFeedbackBeenGenerated(false) // Reset feedback state for next question
+    setHasUsedVoiceForCurrentQuestion(false) // Reset voice usage for next question
 
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1)
@@ -338,20 +341,38 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
   }
 
   const toggleRecording = async () => {
-    if (hasFeedbackBeenGenerated) return // Disable if feedback already generated
+    if (hasUsedVoiceForCurrentQuestion) return // Prevent multiple uses per question
     
     if (isRecording) {
+      // User clicked to stop recording manually
       const transcribedText = await stopRecording()
       if (transcribedText) {
         // Add transcribed text to existing answer (don't overwrite)
         setAnswer(prev => prev ? `${prev} ${transcribedText}` : transcribedText)
       }
+      setHasUsedVoiceForCurrentQuestion(true) // Disable voice button after use
     } else {
+      // Start recording with 20-second auto-stop
       const started = await startRecording()
       if (!started) {
-        // Recording failed to start
         return
       }
+      
+      // Auto-stop after 20 seconds
+      setTimeout(async () => {
+        if (isRecording) {
+          const transcribedText = await stopRecording()
+          if (transcribedText) {
+            // Add transcribed text to existing answer (don't overwrite)
+            setAnswer(prev => prev ? `${prev} ${transcribedText}` : transcribedText)
+          }
+          setHasUsedVoiceForCurrentQuestion(true) // Disable voice button after auto-stop
+          toast({
+            title: t("Recording Complete"),
+            description: t("20-second voice recording completed. Text has been added to your answer."),
+          })
+        }
+      }, 20000)
     }
   }
 
@@ -512,7 +533,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-purple-900 flex items-center space-x-2">
+                      <h4 ClassName="font-semibold text-purple-900 flex items-center space-x-2">
                         <span>{t('AI Feedback')}</span>
                         {isLoadingFeedback && <Loader2 className="w-4 h-4 animate-spin" />}
                       </h4>
@@ -545,11 +566,11 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
               <Button
                 variant="outline"
                 onClick={toggleRecording}
-                disabled={isTranscribing || hasFeedbackBeenGenerated}
+                disabled={isTranscribing || hasFeedbackBeenGenerated || hasUsedVoiceForCurrentQuestion}
                 className={`flex items-center space-x-2 ${
                   isRecording ? 'text-red-600 border-red-200 bg-red-50' : 
                   isTranscribing ? 'text-blue-600 border-blue-200 bg-blue-50' : 
-                  hasFeedbackBeenGenerated ? 'opacity-50 cursor-not-allowed' :
+                  (hasFeedbackBeenGenerated || hasUsedVoiceForCurrentQuestion) ? 'opacity-50 cursor-not-allowed' :
                   'text-gray-600'
                 }`}
               >
@@ -562,6 +583,11 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
                   <>
                     <MicOff className="w-4 h-4" />
                     <span>{t('Stop Recording')}</span>
+                  </>
+                ) : hasUsedVoiceForCurrentQuestion ? (
+                  <>
+                    <Mic className="w-4 h-4" />
+                    <span>{t('Voice Used')}</span>
                   </>
                 ) : (
                   <>
