@@ -5,8 +5,10 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { Mic, MicOff, Send, Clock, User, Bot } from 'lucide-react'
+import { Mic, MicOff, Send, Clock, User, Bot, Loader2 } from 'lucide-react'
 import { JobData } from './JobSelection'
+import { supabase } from '@/integrations/supabase/client'
+import { useToast } from '@/components/ui/use-toast'
 
 interface InterviewSessionProps {
   jobData: JobData
@@ -30,21 +32,73 @@ interface QuestionAnswer {
 const InterviewSession = ({ jobData, onSessionComplete }: InterviewSessionProps) => {
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [answer, setAnswer] = useState('')
-  const [questions] = useState<string[]>([
-    `Tell me about yourself and why you're interested in the ${jobData.title} position.`,
-    `What experience do you have that makes you suitable for this ${jobData.level} role?`,
-    `Describe a challenging project you worked on in the ${jobData.industry} industry.`,
-    "What are your greatest strengths and how do they apply to this role?",
-    "Where do you see yourself in 5 years?",
-    "Do you have any questions for us?"
-  ])
+  const [questions, setQuestions] = useState<string[]>([])
   const [answers, setAnswers] = useState<string[]>([])
   const [isRecording, setIsRecording] = useState(false)
   const [sessionStartTime] = useState(new Date())
   const [questionStartTime, setQuestionStartTime] = useState(new Date())
   const [questionTimes, setQuestionTimes] = useState<number[]>([])
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(true)
+  const { toast } = useToast()
 
-  const progress = ((currentQuestion + 1) / questions.length) * 100
+  useEffect(() => {
+    const generateQuestions = async () => {
+      setIsLoadingQuestions(true)
+      try {
+        console.log('Generating questions for job data:', jobData)
+        
+        const { data, error } = await supabase.functions.invoke('generate-questions', {
+          body: {
+            jobTitle: jobData.title,
+            level: jobData.level,
+            industry: jobData.industry
+          }
+        })
+
+        if (error) {
+          console.error('Supabase function error:', error)
+          throw error
+        }
+
+        if (!data?.questions || !Array.isArray(data.questions)) {
+          throw new Error('Invalid response format from question generator')
+        }
+
+        console.log(`Received ${data.questions.length} questions`)
+        setQuestions(data.questions)
+        setQuestionStartTime(new Date())
+        
+        toast({
+          title: "Questions Generated",
+          description: `Generated ${data.questions.length} personalized questions for your interview`,
+        })
+
+      } catch (error) {
+        console.error('Error generating questions:', error)
+        toast({
+          title: "Error",
+          description: "Failed to generate questions. Using fallback questions.",
+          variant: "destructive",
+        })
+        
+        // Fallback to basic questions if API fails
+        setQuestions([
+          `Tell me about yourself and why you're interested in the ${jobData.title} position.`,
+          `What experience do you have that makes you suitable for this ${jobData.level} role?`,
+          `Describe a challenging project you worked on in the ${jobData.industry} industry.`,
+          "What are your greatest strengths and how do they apply to this role?",
+          "Where do you see yourself in 5 years?",
+          "Do you have any questions for us?"
+        ])
+      } finally {
+        setIsLoadingQuestions(false)
+      }
+    }
+
+    generateQuestions()
+  }, [jobData, toast])
+
+  const progress = questions.length > 0 ? ((currentQuestion + 1) / questions.length) * 100 : 0
 
   const handleNextQuestion = () => {
     const timeSpent = Date.now() - questionStartTime.getTime()
@@ -84,6 +138,39 @@ const InterviewSession = ({ jobData, onSessionComplete }: InterviewSessionProps)
     const seconds = Math.floor(ms / 1000)
     const minutes = Math.floor(seconds / 60)
     return `${minutes}:${(seconds % 60).toString().padStart(2, '0')}`
+  }
+
+  if (isLoadingQuestions) {
+    return (
+      <div className="max-w-4xl mx-auto">
+        <div className="text-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Preparing Your Interview</h2>
+          <div className="flex items-center justify-center space-x-4 text-sm text-gray-600">
+            <Badge variant="outline" className="bg-blue-50">
+              {jobData.title}
+            </Badge>
+            <Badge variant="outline" className="bg-green-50">
+              {jobData.level}
+            </Badge>
+            <Badge variant="outline" className="bg-purple-50">
+              {jobData.industry}
+            </Badge>
+          </div>
+        </div>
+
+        <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
+          <CardContent className="flex flex-col items-center justify-center py-16">
+            <Loader2 className="w-12 h-12 animate-spin text-blue-600 mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              Generating Personalized Questions
+            </h3>
+            <p className="text-gray-600 text-center max-w-md">
+              Creating 30+ tailored interview questions based on your role, experience level, and industry...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    )
   }
 
   return (
@@ -181,7 +268,7 @@ const InterviewSession = ({ jobData, onSessionComplete }: InterviewSessionProps)
       </Card>
 
       <div className="text-center text-sm text-gray-500">
-        <p>Take your time with each answer. This is your practice session!</p>
+        <p>Take your time with each answer. These questions are personalized for your role!</p>
       </div>
     </div>
   )
