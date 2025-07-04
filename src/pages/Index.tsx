@@ -54,7 +54,7 @@ const Index = () => {
     <AuthLayout>
       {currentState === 'job-selection' && (
         <JobSelection 
-          onJobSelected={handleJobSelected} 
+          onJobSelect={handleJobSelected} 
           onViewHistory={handleViewHistory} 
         />
       )}
