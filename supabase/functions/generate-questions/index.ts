@@ -67,7 +67,7 @@ Example format: ["Question 1 here", "Question 2 here", ...]`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4.1-2025-04-14',
         messages: [
           { role: 'system', content: 'You are an expert interview coach and HR professional. Always respond with valid JSON arrays of interview questions.' },
           { role: 'user', content: prompt }
