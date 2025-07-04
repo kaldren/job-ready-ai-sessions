@@ -1,12 +1,10 @@
-
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { Switch } from '@/components/ui/switch'
-import { Mic, MicOff, Send, Clock, User, Bot, Loader2, Pause, Play, MessageSquare, Zap } from 'lucide-react'
+import { Mic, MicOff, Send, Clock, User, Bot, Loader2, Pause, Play, MessageSquare } from 'lucide-react'
 import { JobData } from './JobSelection'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
@@ -58,7 +56,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(!resumeSession)
   const [isPaused, setIsPaused] = useState(false)
   const [pausedSessionId, setPausedSessionId] = useState<string | null>(resumeSession?.id || null)
-  const [instantFeedbackEnabled, setInstantFeedbackEnabled] = useState(false)
+  const instantFeedbackEnabled = jobData.instantFeedbackEnabled || false
   const [instantFeedback, setInstantFeedback] = useState<string>('')
   const [isLoadingFeedback, setIsLoadingFeedback] = useState(false)
   const { toast } = useToast()
@@ -406,6 +404,11 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
             <Badge variant="outline" className="bg-purple-50">
               {jobData.industry}
             </Badge>
+            {instantFeedbackEnabled && (
+              <Badge variant="outline" className="bg-amber-50 text-amber-700">
+                {t('AI Feedback Enabled')}
+              </Badge>
+            )}
           </div>
         </div>
 
@@ -443,6 +446,11 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
           <Badge variant="outline" className="bg-purple-50">
             {jobData.industry}
           </Badge>
+          {instantFeedbackEnabled && (
+            <Badge variant="outline" className="bg-amber-50 text-amber-700">
+              {t('AI Feedback Enabled')}
+            </Badge>
+          )}
         </div>
       </div>
 
@@ -469,21 +477,6 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
             </div>
           </div>
           <Progress value={progress} className="mt-2" />
-          
-          {/* Instant Feedback Toggle */}
-          <div className="flex items-center justify-between mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
-            <div className="flex items-center space-x-2">
-              <Zap className="w-4 h-4 text-amber-600" />
-              <span className="text-sm font-medium text-amber-800">{t('Instant AI Feedback')}</span>
-              <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700">
-                {t('Real-time')}
-              </Badge>
-            </div>
-            <Switch
-              checked={instantFeedbackEnabled}
-              onCheckedChange={setInstantFeedbackEnabled}
-            />
-          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="bg-gradient-to-r from-blue-50 to-green-50 p-6 rounded-xl border border-blue-100">

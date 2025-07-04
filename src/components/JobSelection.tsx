@@ -5,139 +5,134 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Briefcase, Building, TrendingUp, History, Sparkles } from 'lucide-react'
-import LanguageSelector from '@/components/LanguageSelector'
+import { Switch } from '@/components/ui/switch'
+import { Badge } from '@/components/ui/badge'
+import { Briefcase, Building, User, Play, Zap } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
-
-interface JobSelectionProps {
-  onJobSelected: (jobData: JobData) => void
-  onViewHistory: () => void
-}
 
 export interface JobData {
   title: string
   level: string
   industry: string
+  instantFeedbackEnabled?: boolean
 }
 
-const JobSelection = ({ onJobSelected, onViewHistory }: JobSelectionProps) => {
-  const [jobTitle, setJobTitle] = useState('')
-  const [jobLevel, setJobLevel] = useState('')
-  const [jobIndustry, setJobIndustry] = useState('')
+interface JobSelectionProps {
+  onJobSelect: (jobData: JobData) => void
+}
+
+const JobSelection = ({ onJobSelect }: JobSelectionProps) => {
+  const [title, setTitle] = useState('')
+  const [level, setLevel] = useState('')
+  const [industry, setIndustry] = useState('')
+  const [instantFeedbackEnabled, setInstantFeedbackEnabled] = useState(false)
   const { t } = useLanguage()
 
-  const handleStartInterview = () => {
-    if (jobTitle && jobLevel && jobIndustry) {
-      const jobData: JobData = {
-        title: jobTitle,
-        level: jobLevel,
-        industry: jobIndustry,
-      }
-      onJobSelected(jobData)
-    } else {
-      alert(t('Please fill in all the fields'))
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (title && level && industry) {
+      onJobSelect({ 
+        title, 
+        level, 
+        industry,
+        instantFeedbackEnabled 
+      })
     }
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-green-50 p-6">
-      <div className="max-w-4xl mx-auto">
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent mb-6">
-            {t('AI Interview Practice')}
-          </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-            {t('Master your next interview with personalized AI feedback and real-time coaching')}
+    <div className="max-w-2xl mx-auto">
+      <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
+        <CardHeader className="text-center">
+          <CardTitle className="text-2xl font-bold text-gray-900 mb-2">
+            {t('Tell us about the position')}
+          </CardTitle>
+          <p className="text-gray-600">
+            {t('We\'ll generate personalized interview questions based on your role')}
           </p>
-        </div>
-
-        {/* Language Selector - Small dropdown in top right */}
-        <div className="flex justify-end mb-6">
-          <LanguageSelector />
-        </div>
-
-        {/* Job Selection Form */}
-        <Card className="shadow-2xl border-0 bg-white/80 backdrop-blur-lg relative overflow-hidden">
-          <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-green-500/5" />
-          <CardHeader className="relative z-10 pb-8">
-            <CardTitle className="text-3xl font-bold text-center flex items-center justify-center">
-              <Sparkles className="w-8 h-8 mr-3 text-yellow-500" />
-              {t('Tell us about the role')}
-            </CardTitle>
-            <p className="text-center text-gray-600 mt-2">
-              {t('We\'ll customize your interview experience based on this information')}
-            </p>
-          </CardHeader>
-          <CardContent className="relative z-10 space-y-8">
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="space-y-3">
-                <Label htmlFor="job-title" className="text-lg font-semibold flex items-center">
-                  <Briefcase className="w-5 h-5 mr-2 text-blue-600" />
-                  {t('Job Title')}
-                </Label>
-                <Input
-                  id="job-title"
-                  placeholder={t('e.g. Software Engineer, Product Manager...')}
-                  value={jobTitle}
-                  onChange={(e) => setJobTitle(e.target.value)}
-                  className="h-12 text-lg border-2 focus:border-blue-400 transition-colors"
-                />
-              </div>
-
-              <div className="space-y-3">
-                <Label htmlFor="job-industry" className="text-lg font-semibold flex items-center">
-                  <Building className="w-5 h-5 mr-2 text-green-600" />
-                  {t('Industry')}
-                </Label>
-                <Input
-                  id="job-industry"
-                  placeholder={t('e.g. Technology, Healthcare, Finance...')}
-                  value={jobIndustry}
-                  onChange={(e) => setJobIndustry(e.target.value)}
-                  className="h-12 text-lg border-2 focus:border-green-400 transition-colors"
-                />
-              </div>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="title" className="flex items-center space-x-2">
+                <Briefcase className="w-4 h-4" />
+                <span>{t('Job Title')}</span>
+              </Label>
+              <Input
+                id="title"
+                placeholder={t('e.g., Software Engineer, Marketing Manager, Sales Representative')}
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="text-base"
+                required
+              />
             </div>
 
-            <div className="space-y-3">
-              <Label htmlFor="job-level" className="text-lg font-semibold flex items-center">
-                <TrendingUp className="w-5 h-5 mr-2 text-purple-600" />
-                {t('Experience Level')}
+            <div className="space-y-2">
+              <Label htmlFor="level" className="flex items-center space-x-2">
+                <User className="w-4 h-4" />
+                <span>{t('Experience Level')}</span>
               </Label>
-              <Select onValueChange={setJobLevel}>
-                <SelectTrigger id="job-level" className="h-12 text-lg border-2 focus:border-purple-400">
+              <Select value={level} onValueChange={setLevel} required>
+                <SelectTrigger className="text-base">
                   <SelectValue placeholder={t('Select your experience level')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Entry Level" className="text-lg">{t('Entry Level (0-2 years)')}</SelectItem>
-                  <SelectItem value="Mid Level" className="text-lg">{t('Mid Level (2-5 years)')}</SelectItem>
-                  <SelectItem value="Senior Level" className="text-lg">{t('Senior Level (5+ years)')}</SelectItem>
-                  <SelectItem value="Executive Level" className="text-lg">{t('Executive Level')}</SelectItem>
+                  <SelectItem value="entry">{t('Entry Level (0-2 years)')}</SelectItem>
+                  <SelectItem value="mid">{t('Mid Level (3-5 years)')}</SelectItem>
+                  <SelectItem value="senior">{t('Senior Level (6-10 years)')}</SelectItem>
+                  <SelectItem value="lead">{t('Lead/Principal (10+ years)')}</SelectItem>
+                  <SelectItem value="executive">{t('Executive/C-Level')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
-            <Button
-              className="w-full h-14 text-xl font-bold bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white shadow-lg hover:shadow-xl transform hover:scale-[1.02] transition-all duration-200"
-              onClick={handleStartInterview}
-            >
-              {t('Start Your AI Interview')}
-            </Button>
-          </CardContent>
-        </Card>
+            <div className="space-y-2">
+              <Label htmlFor="industry" className="flex items-center space-x-2">
+                <Building className="w-4 h-4" />
+                <span>{t('Industry')}</span>
+              </Label>
+              <Input
+                id="industry"
+                placeholder={t('e.g., Technology, Healthcare, Finance, Education')}
+                value={industry}
+                onChange={(e) => setIndustry(e.target.value)}
+                className="text-base"
+                required
+              />
+            </div>
 
-        {/* History Button */}
-        <div className="mt-8 text-center">
-          <Button 
-            variant="outline" 
-            onClick={onViewHistory} 
-            className="bg-white/80 backdrop-blur-sm hover:bg-white border-2 px-8 py-3"
-          >
-            <History className="w-5 h-5 mr-2" />
-            {t('View Interview History')}
-          </Button>
-        </div>
-      </div>
+            {/* Instant Feedback Toggle */}
+            <div className="space-y-3 p-4 bg-gradient-to-r from-amber-50 to-yellow-50 rounded-lg border border-amber-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2">
+                  <Zap className="w-5 h-5 text-amber-600" />
+                  <span className="font-medium text-amber-800">{t('AI-Powered Instant Feedback')}</span>
+                  <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700">
+                    {t('Premium Feature')}
+                  </Badge>
+                </div>
+                <Switch
+                  checked={instantFeedbackEnabled}
+                  onCheckedChange={setInstantFeedbackEnabled}
+                />
+              </div>
+              <p className="text-sm text-amber-700 leading-relaxed">
+                {t('Get real-time AI feedback as you type your answers. This helps improve your responses during the interview but uses additional AI tokens.')}
+              </p>
+            </div>
+
+            <Button
+              type="submit"
+              className="w-full bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white py-3 text-lg font-semibold"
+              disabled={!title || !level || !industry}
+            >
+              <Play className="w-5 h-5 mr-2" />
+              {t('Start Interview')}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   )
 }
