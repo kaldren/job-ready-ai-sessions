@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -18,6 +17,7 @@ import {
 import { SessionData } from './InterviewSession'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/components/ui/use-toast'
+import { useInterviewSessions } from '@/hooks/useInterviewSessions'
 
 interface FeedbackReportProps {
   sessionData: SessionData
@@ -42,7 +42,9 @@ interface AIFeedback {
 const FeedbackReport = ({ sessionData, onStartNew }: FeedbackReportProps) => {
   const [feedback, setFeedback] = useState<AIFeedback | null>(null)
   const [isLoadingFeedback, setIsLoadingFeedback] = useState(true)
+  const [sessionSaved, setSessionSaved] = useState(false)
   const { toast } = useToast()
+  const { saveSession } = useInterviewSessions()
 
   const totalQuestions = sessionData.questions.length
   const averageTimePerQuestion = sessionData.totalTime / totalQuestions / 1000 / 60 // minutes
@@ -76,6 +78,12 @@ const FeedbackReport = ({ sessionData, onStartNew }: FeedbackReportProps) => {
         console.log('Received AI feedback:', data.feedback)
         setFeedback(data.feedback)
         
+        // Save session to database once feedback is generated
+        if (!sessionSaved) {
+          await saveSession(sessionData, data.feedback)
+          setSessionSaved(true)
+        }
+        
         toast({
           title: "Feedback Generated",
           description: "Your personalized interview feedback is ready!",
@@ -90,7 +98,7 @@ const FeedbackReport = ({ sessionData, onStartNew }: FeedbackReportProps) => {
         })
         
         // Fallback to mock feedback
-        setFeedback({
+        const fallbackFeedback = {
           overallScore: 78,
           scores: {
             communication: 82,
@@ -125,14 +133,22 @@ const FeedbackReport = ({ sessionData, onStartNew }: FeedbackReportProps) => {
               description: "Review key concepts relevant to your target role"
             }
           ]
-        })
+        }
+        
+        setFeedback(fallbackFeedback)
+        
+        // Save session with fallback feedback
+        if (!sessionSaved) {
+          await saveSession(sessionData, fallbackFeedback)
+          setSessionSaved(true)
+        }
       } finally {
         setIsLoadingFeedback(false)
       }
     }
 
     generateFeedback()
-  }, [sessionData, toast])
+  }, [sessionData, toast, saveSession, sessionSaved])
 
   const formatTime = (ms: number) => {
     const seconds = Math.floor(ms / 1000)

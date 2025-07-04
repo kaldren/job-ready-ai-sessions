@@ -4,8 +4,9 @@ import AuthLayout from '@/components/AuthLayout'
 import JobSelection, { JobData } from '@/components/JobSelection'
 import InterviewSession, { SessionData } from '@/components/InterviewSession'
 import FeedbackReport from '@/components/FeedbackReport'
+import InterviewHistory from '@/components/InterviewHistory'
 
-type AppState = 'job-selection' | 'interview' | 'feedback'
+type AppState = 'job-selection' | 'interview' | 'feedback' | 'history'
 
 const Index = () => {
   const [currentState, setCurrentState] = useState<AppState>('job-selection')
@@ -30,10 +31,21 @@ const Index = () => {
     setSessionData(null)
   }
 
+  const handleViewHistory = () => {
+    setCurrentState('history')
+  }
+
+  const handleBackToSelection = () => {
+    setCurrentState('job-selection')
+  }
+
   return (
     <AuthLayout>
       {currentState === 'job-selection' && (
-        <JobSelection onJobSelected={handleJobSelected} />
+        <JobSelection 
+          onJobSelected={handleJobSelected} 
+          onViewHistory={handleViewHistory} 
+        />
       )}
       
       {currentState === 'interview' && selectedJob && (
@@ -48,6 +60,10 @@ const Index = () => {
           sessionData={sessionData}
           onStartNew={handleStartNew}
         />
+      )}
+
+      {currentState === 'history' && (
+        <InterviewHistory onBack={handleBackToSelection} />
       )}
     </AuthLayout>
   )
