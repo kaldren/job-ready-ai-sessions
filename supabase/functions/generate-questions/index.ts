@@ -16,7 +16,10 @@ serve(async (req) => {
   try {
     const { jobTitle, level, industry } = await req.json();
 
+    console.log('Request received:', { jobTitle, level, industry });
+
     if (!jobTitle || !level || !industry) {
+      console.error('Missing required fields:', { jobTitle, level, industry });
       return new Response(
         JSON.stringify({ error: 'Missing required fields: jobTitle, level, industry' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -25,7 +28,11 @@ serve(async (req) => {
 
     const openAIApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openAIApiKey) {
-      throw new Error('OPENAI_API_KEY is not set');
+      console.error('OPENAI_API_KEY environment variable is not set');
+      return new Response(
+        JSON.stringify({ error: 'OpenAI API key not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     console.log('Generating questions for:', { jobTitle, level, industry });
@@ -51,6 +58,8 @@ Format your response as a JSON array of strings, with each string being a comple
 
 Example format: ["Question 1 here", "Question 2 here", ...]`;
 
+    console.log('Making OpenAI API request...');
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -68,32 +77,60 @@ Example format: ["Question 1 here", "Question 2 here", ...]`;
       }),
     });
 
+    console.log('OpenAI API response status:', response.status);
+
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error('OpenAI API error:', errorData);
-      throw new Error(`OpenAI API error: ${errorData.error?.message || 'Unknown error'}`);
+      const errorText = await response.text();
+      console.error('OpenAI API error response:', errorText);
+      
+      let errorData;
+      try {
+        errorData = JSON.parse(errorText);
+      } catch {
+        errorData = { error: { message: errorText } };
+      }
+      
+      return new Response(
+        JSON.stringify({ error: `OpenAI API error: ${errorData.error?.message || 'Unknown error'}` }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     const data = await response.json();
-    const generatedContent = data.choices[0].message.content;
+    console.log('OpenAI API response received successfully');
     
-    console.log('Generated content:', generatedContent);
+    const generatedContent = data.choices[0].message.content;
+    console.log('Generated content length:', generatedContent?.length);
+    console.log('Generated content preview:', generatedContent?.substring(0, 200));
 
     // Parse the JSON response
     let questions;
     try {
-      questions = JSON.parse(generatedContent);
+      // Clean up the response in case there's extra text
+      const cleanContent = generatedContent.trim();
+      const jsonMatch = cleanContent.match(/\[[\s\S]*\]/);
+      const jsonString = jsonMatch ? jsonMatch[0] : cleanContent;
+      
+      questions = JSON.parse(jsonString);
+      console.log('Successfully parsed questions, count:', questions.length);
     } catch (parseError) {
       console.error('Failed to parse JSON:', parseError);
       console.error('Raw content:', generatedContent);
-      throw new Error('Failed to parse questions from OpenAI response');
+      return new Response(
+        JSON.stringify({ error: 'Failed to parse questions from OpenAI response' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
     if (!Array.isArray(questions)) {
-      throw new Error('OpenAI response is not an array of questions');
+      console.error('OpenAI response is not an array:', typeof questions);
+      return new Response(
+        JSON.stringify({ error: 'OpenAI response is not an array of questions' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    console.log(`Generated ${questions.length} questions`);
+    console.log(`Successfully generated ${questions.length} questions`);
 
     return new Response(
       JSON.stringify({ questions }),
@@ -101,9 +138,9 @@ Example format: ["Question 1 here", "Question 2 here", ...]`;
     );
 
   } catch (error) {
-    console.error('Error in generate-questions function:', error);
+    console.error('Unexpected error in generate-questions function:', error);
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: `Server error: ${error.message}` }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
