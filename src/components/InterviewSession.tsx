@@ -10,6 +10,7 @@ import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { useInterviewSessions } from '@/hooks/useInterviewSessions'
 import { useUser } from '@clerk/clerk-react'
+import { useVoiceRecording } from '@/hooks/useVoiceRecording'
 
 interface InterviewSessionProps {
   jobData: JobData
@@ -47,7 +48,6 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
   const [answer, setAnswer] = useState('')
   const [questions, setQuestions] = useState<string[]>(resumeSession?.questions || [])
   const [answers, setAnswers] = useState<string[]>(resumeSession?.answers || [])
-  const [isRecording, setIsRecording] = useState(false)
   const [sessionStartTime] = useState(resumeSession?.sessionStartTime || new Date())
   const [questionStartTime, setQuestionStartTime] = useState(new Date())
   const [questionTimes, setQuestionTimes] = useState<number[]>(resumeSession?.questionTimes || [])
@@ -57,6 +57,9 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
   const { toast } = useToast()
   const { saveSession } = useInterviewSessions()
   const { user: clerkUser } = useUser()
+  
+  // Voice recording functionality
+  const { isRecording, isTranscribing, startRecording, stopRecording, cancelRecording } = useVoiceRecording()
 
   useEffect(() => {
     if (resumeSession) {
@@ -286,9 +289,20 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
     }
   }
 
-  const toggleRecording = () => {
-    setIsRecording(!isRecording)
-    // In a real app, you'd implement actual voice recording here
+  const toggleRecording = async () => {
+    if (isRecording) {
+      const transcribedText = await stopRecording()
+      if (transcribedText) {
+        // Add transcribed text to existing answer (don't overwrite)
+        setAnswer(prev => prev ? `${prev} ${transcribedText}` : transcribedText)
+      }
+    } else {
+      const started = await startRecording()
+      if (!started) {
+        // Recording failed to start
+        return
+      }
+    }
   }
 
   const formatTime = (ms: number) => {
@@ -432,17 +446,34 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
               <Button
                 variant="outline"
                 onClick={toggleRecording}
+                disabled={isTranscribing}
                 className={`flex items-center space-x-2 ${
-                  isRecording ? 'text-red-600 border-red-200 bg-red-50' : 'text-gray-600'
+                  isRecording ? 'text-red-600 border-red-200 bg-red-50' : 
+                  isTranscribing ? 'text-blue-600 border-blue-200 bg-blue-50' : 
+                  'text-gray-600'
                 }`}
               >
-                {isRecording ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-                <span>{isRecording ? 'Stop Recording' : 'Voice Answer'}</span>
+                {isTranscribing ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Transcribing...</span>
+                  </>
+                ) : isRecording ? (
+                  <>
+                    <MicOff className="w-4 h-4" />
+                    <span>Stop Recording</span>
+                  </>
+                ) : (
+                  <>
+                    <Mic className="w-4 h-4" />
+                    <span>Voice Answer (20s max)</span>
+                  </>
+                )}
               </Button>
 
               <Button
                 onClick={handleNextQuestion}
-                disabled={!answer.trim()}
+                disabled={!answer.trim() || isRecording || isTranscribing}
                 className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white px-6"
               >
                 {currentQuestion < questions.length - 1 ? (
@@ -464,6 +495,11 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
 
       <div className="text-center text-sm text-gray-500">
         <p>Take your time with each answer. You can pause anytime and resume later from your history!</p>
+        {isRecording && (
+          <p className="text-red-600 font-medium mt-2">
+            🔴 Recording... (stops automatically after 20 seconds)
+          </p>
+        )}
       </div>
     </div>
   )
