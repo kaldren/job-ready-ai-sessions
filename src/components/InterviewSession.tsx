@@ -5,14 +5,16 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { Mic, MicOff, Send, Clock, User, Bot, Loader2 } from 'lucide-react'
+import { Mic, MicOff, Send, Clock, User, Bot, Loader2, Pause, Play } from 'lucide-react'
 import { JobData } from './JobSelection'
 import { supabase } from '@/integrations/supabase/client'
-import { useToast } from '@/components/ui/use-toast'
+import { useToast } from '@/hooks/use-toast'
+import { useInterviewSessions } from '@/hooks/useInterviewSessions'
 
 interface InterviewSessionProps {
   jobData: JobData
   onSessionComplete: (sessionData: SessionData) => void
+  resumeSession?: ResumeSessionData | null
 }
 
 export interface SessionData {
@@ -23,25 +25,49 @@ export interface SessionData {
   endTime: Date
 }
 
+export interface ResumeSessionData {
+  id: string
+  jobData: JobData
+  questions: string[]
+  answers: string[]
+  currentQuestion: number
+  questionTimes: number[]
+  sessionStartTime: Date
+  isPaused: true
+}
+
 interface QuestionAnswer {
   question: string
   answer: string
   timeSpent: number
 }
 
-const InterviewSession = ({ jobData, onSessionComplete }: InterviewSessionProps) => {
-  const [currentQuestion, setCurrentQuestion] = useState(0)
+const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: InterviewSessionProps) => {
+  const [currentQuestion, setCurrentQuestion] = useState(resumeSession?.currentQuestion || 0)
   const [answer, setAnswer] = useState('')
-  const [questions, setQuestions] = useState<string[]>([])
-  const [answers, setAnswers] = useState<string[]>([])
+  const [questions, setQuestions] = useState<string[]>(resumeSession?.questions || [])
+  const [answers, setAnswers] = useState<string[]>(resumeSession?.answers || [])
   const [isRecording, setIsRecording] = useState(false)
-  const [sessionStartTime] = useState(new Date())
+  const [sessionStartTime] = useState(resumeSession?.sessionStartTime || new Date())
   const [questionStartTime, setQuestionStartTime] = useState(new Date())
-  const [questionTimes, setQuestionTimes] = useState<number[]>([])
-  const [isLoadingQuestions, setIsLoadingQuestions] = useState(true)
+  const [questionTimes, setQuestionTimes] = useState<number[]>(resumeSession?.questionTimes || [])
+  const [isLoadingQuestions, setIsLoadingQuestions] = useState(!resumeSession)
+  const [isPaused, setIsPaused] = useState(false)
   const { toast } = useToast()
+  const { saveSession } = useInterviewSessions()
 
   useEffect(() => {
+    if (resumeSession) {
+      // Resume existing session
+      setQuestions(resumeSession.questions)
+      setAnswers(resumeSession.answers)
+      setCurrentQuestion(resumeSession.currentQuestion)
+      setQuestionTimes(resumeSession.questionTimes)
+      setQuestionStartTime(new Date())
+      setIsLoadingQuestions(false)
+      return
+    }
+
     const generateQuestions = async () => {
       setIsLoadingQuestions(true)
       try {
@@ -96,9 +122,84 @@ const InterviewSession = ({ jobData, onSessionComplete }: InterviewSessionProps)
     }
 
     generateQuestions()
-  }, [jobData, toast])
+  }, [jobData, toast, resumeSession])
 
   const progress = questions.length > 0 ? ((currentQuestion + 1) / questions.length) * 100 : 0
+
+  const handlePauseSession = async () => {
+    try {
+      const timeSpent = Date.now() - questionStartTime.getTime()
+      const currentAnswers = [...answers]
+      const currentTimes = [...questionTimes]
+      
+      // If there's a current answer, include it in the paused state
+      if (answer.trim()) {
+        currentAnswers[currentQuestion] = answer
+        currentTimes[currentQuestion] = timeSpent
+      }
+
+      const pausedSessionData = {
+        jobData,
+        questions,
+        answers: currentAnswers,
+        currentQuestion,
+        questionTimes: currentTimes,
+        sessionStartTime,
+        isPaused: true,
+        totalTime: Date.now() - sessionStartTime.getTime()
+      }
+
+      console.log('Saving paused session:', pausedSessionData)
+
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        throw new Error('User not authenticated')
+      }
+
+      const { error } = await supabase
+        .from('interview_sessions')
+        .insert({
+          user_id: user.id,
+          job_title: jobData.title,
+          job_level: jobData.level,
+          job_industry: jobData.industry,
+          questions: questions.map((q, i) => ({
+            question: q,
+            answer: currentAnswers[i] || '',
+            timeSpent: currentTimes[i] || 0
+          })),
+          total_time: Date.now() - sessionStartTime.getTime(),
+          started_at: sessionStartTime.toISOString(),
+          completed_at: new Date().toISOString(),
+          feedback: { 
+            paused: true,
+            currentQuestion,
+            resumeData: pausedSessionData
+          }
+        })
+
+      if (error) {
+        console.error('Error saving paused session:', error)
+        throw error
+      }
+
+      toast({
+        title: "Session Paused",
+        description: "Your interview has been saved and can be resumed from history",
+      })
+
+      setIsPaused(true)
+      
+    } catch (error) {
+      console.error('Error pausing session:', error)
+      toast({
+        title: "Error",
+        description: "Failed to pause session",
+        variant: "destructive",
+      })
+    }
+  }
 
   const handleNextQuestion = () => {
     const timeSpent = Date.now() - questionStartTime.getTime()
@@ -140,6 +241,28 @@ const InterviewSession = ({ jobData, onSessionComplete }: InterviewSessionProps)
     return `${minutes}:${(seconds % 60).toString().padStart(2, '0')}`
   }
 
+  if (isPaused) {
+    return (
+      <div className="max-w-4xl mx-auto text-center">
+        <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
+          <CardContent className="py-16">
+            <Pause className="w-16 h-16 mx-auto text-blue-600 mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Interview Paused</h2>
+            <p className="text-gray-600 mb-6">
+              Your interview session has been saved and can be resumed from your interview history.
+            </p>
+            <Button 
+              onClick={() => window.location.reload()} 
+              className="bg-gradient-to-r from-blue-600 to-green-600 hover:from-blue-700 hover:to-green-700 text-white"
+            >
+              Return to Main Menu
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    )
+  }
+
   if (isLoadingQuestions) {
     return (
       <div className="max-w-4xl mx-auto">
@@ -162,10 +285,13 @@ const InterviewSession = ({ jobData, onSessionComplete }: InterviewSessionProps)
           <CardContent className="flex flex-col items-center justify-center py-16">
             <Loader2 className="w-12 h-12 animate-spin text-blue-600 mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              Generating Personalized Questions
+              {resumeSession ? 'Resuming Interview Session' : 'Generating Personalized Questions'}
             </h3>
             <p className="text-gray-600 text-center max-w-md">
-              Creating 30+ tailored interview questions based on your role, experience level, and industry...
+              {resumeSession 
+                ? 'Loading your previous interview session...'
+                : 'Creating 30+ tailored interview questions based on your role, experience level, and industry...'
+              }
             </p>
           </CardContent>
         </Card>
@@ -176,7 +302,9 @@ const InterviewSession = ({ jobData, onSessionComplete }: InterviewSessionProps)
   return (
     <div className="max-w-4xl mx-auto">
       <div className="text-center mb-6">
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Interview in Progress</h2>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          {resumeSession ? 'Resuming Interview' : 'Interview in Progress'}
+        </h2>
         <div className="flex items-center justify-center space-x-4 text-sm text-gray-600">
           <Badge variant="outline" className="bg-blue-50">
             {jobData.title}
@@ -197,8 +325,19 @@ const InterviewSession = ({ jobData, onSessionComplete }: InterviewSessionProps)
               <Clock className="w-5 h-5" />
               <span>Question {currentQuestion + 1} of {questions.length}</span>
             </CardTitle>
-            <div className="text-sm text-gray-500">
-              {formatTime(Date.now() - sessionStartTime.getTime())}
+            <div className="flex items-center space-x-4">
+              <div className="text-sm text-gray-500">
+                {formatTime(Date.now() - sessionStartTime.getTime())}
+              </div>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handlePauseSession}
+                className="flex items-center space-x-2"
+              >
+                <Pause className="w-4 h-4" />
+                <span>Pause</span>
+              </Button>
             </div>
           </div>
           <Progress value={progress} className="mt-2" />
@@ -268,7 +407,7 @@ const InterviewSession = ({ jobData, onSessionComplete }: InterviewSessionProps)
       </Card>
 
       <div className="text-center text-sm text-gray-500">
-        <p>Take your time with each answer. These questions are personalized for your role!</p>
+        <p>Take your time with each answer. You can pause anytime and resume later from your history!</p>
       </div>
     </div>
   )

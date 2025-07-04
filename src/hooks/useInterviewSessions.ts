@@ -35,6 +35,8 @@ export const useInterviewSessions = () => {
 
       if (error) throw error
 
+      console.log('Fetched sessions from database:', data)
+
       // Type assertion to handle the Json type from database
       const typedData = (data || []).map(session => ({
         ...session,
@@ -75,21 +77,41 @@ export const useInterviewSessions = () => {
         throw new Error('User not authenticated')
       }
 
-      const { error } = await supabase
-        .from('interview_sessions')
-        .insert({
-          user_id: user.id,
-          job_title: sessionData.jobData.title,
-          job_level: sessionData.jobData.level,
-          job_industry: sessionData.jobData.industry,
-          questions: sessionData.questions,
-          total_time: sessionData.totalTime,
-          started_at: sessionData.startTime.toISOString(),
-          completed_at: sessionData.endTime.toISOString(),
-          feedback: feedback
-        })
+      console.log('Saving session data:', sessionData)
+      console.log('With feedback:', feedback)
 
-      if (error) throw error
+      // Ensure questions are in the right format
+      const formattedQuestions = sessionData.questions.map((q: any) => ({
+        question: q.question,
+        answer: q.answer || '',
+        timeSpent: q.timeSpent || 0
+      }))
+
+      const sessionToSave = {
+        user_id: user.id,
+        job_title: sessionData.jobData.title,
+        job_level: sessionData.jobData.level,
+        job_industry: sessionData.jobData.industry,
+        questions: formattedQuestions,
+        total_time: sessionData.totalTime,
+        started_at: sessionData.startTime.toISOString(),
+        completed_at: sessionData.endTime.toISOString(),
+        feedback: feedback
+      }
+
+      console.log('Formatted session to save:', sessionToSave)
+
+      const { data: insertedData, error } = await supabase
+        .from('interview_sessions')
+        .insert(sessionToSave)
+        .select()
+
+      if (error) {
+        console.error('Database error:', error)
+        throw error
+      }
+
+      console.log('Successfully saved session:', insertedData)
 
       toast({
         title: "Session Saved",

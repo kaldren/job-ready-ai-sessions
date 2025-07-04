@@ -12,16 +12,20 @@ import {
   ChevronUp,
   FileText,
   ArrowLeft,
-  Loader2
+  Loader2,
+  Play,
+  Pause
 } from 'lucide-react'
 import { useInterviewSessions } from '@/hooks/useInterviewSessions'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
+import { ResumeSessionData } from './InterviewSession'
 
 interface InterviewHistoryProps {
   onBack: () => void
+  onResumeSession: (sessionData: ResumeSessionData) => void
 }
 
-const InterviewHistory = ({ onBack }: InterviewHistoryProps) => {
+const InterviewHistory = ({ onBack, onResumeSession }: InterviewHistoryProps) => {
   const { sessions, isLoading } = useInterviewSessions()
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(new Set())
 
@@ -54,6 +58,31 @@ const InterviewHistory = ({ onBack }: InterviewHistoryProps) => {
     if (score >= 80) return 'text-green-600'
     if (score >= 60) return 'text-yellow-600'
     return 'text-red-600'
+  }
+
+  const isPausedSession = (session: any) => {
+    return session.feedback && session.feedback.paused === true
+  }
+
+  const handleResumeSession = (session: any) => {
+    if (!session.feedback?.resumeData) return
+    
+    const resumeData: ResumeSessionData = {
+      id: session.id,
+      jobData: {
+        title: session.job_title,
+        level: session.job_level,
+        industry: session.job_industry
+      },
+      questions: session.feedback.resumeData.questions || [],
+      answers: session.feedback.resumeData.answers || [],
+      currentQuestion: session.feedback.resumeData.currentQuestion || 0,
+      questionTimes: session.feedback.resumeData.questionTimes || [],
+      sessionStartTime: new Date(session.feedback.resumeData.sessionStartTime),
+      isPaused: true
+    }
+    
+    onResumeSession(resumeData)
   }
 
   if (isLoading) {
@@ -110,15 +139,30 @@ const InterviewHistory = ({ onBack }: InterviewHistoryProps) => {
                     <CardHeader>
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-4">
-                          {session.feedback?.overallScore && (
+                          {isPausedSession(session) ? (
+                            <div className="flex items-center justify-center w-12 h-12 bg-orange-100 rounded-full">
+                              <Pause className="w-6 h-6 text-orange-600" />
+                            </div>
+                          ) : session.feedback?.overallScore ? (
                             <div className="flex items-center justify-center w-12 h-12 bg-gray-100 rounded-full">
                               <span className={`text-lg font-bold ${getScoreColor(session.feedback.overallScore)}`}>
                                 {session.feedback.overallScore}%
                               </span>
                             </div>
+                          ) : (
+                            <div className="flex items-center justify-center w-12 h-12 bg-gray-100 rounded-full">
+                              <FileText className="w-6 h-6 text-gray-400" />
+                            </div>
                           )}
                           <div>
-                            <CardTitle className="text-lg">{session.job_title}</CardTitle>
+                            <div className="flex items-center space-x-2">
+                              <CardTitle className="text-lg">{session.job_title}</CardTitle>
+                              {isPausedSession(session) && (
+                                <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                                  Paused
+                                </Badge>
+                              )}
+                            </div>
                             <div className="flex items-center space-x-2 mt-1">
                               <Badge variant="outline" className="text-xs">
                                 {session.job_level}
@@ -152,9 +196,32 @@ const InterviewHistory = ({ onBack }: InterviewHistoryProps) => {
                 
                 <CollapsibleContent>
                   <CardContent className="pt-0">
+                    {isPausedSession(session) && (
+                      <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <h4 className="font-semibold text-orange-900 mb-1">Paused Interview Session</h4>
+                            <p className="text-sm text-orange-700">
+                              You can resume this interview from question {(session.feedback?.currentQuestion || 0) + 1} of {session.questions.length}
+                            </p>
+                          </div>
+                          <Button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleResumeSession(session)
+                            }}
+                            className="bg-orange-600 hover:bg-orange-700 text-white"
+                          >
+                            <Play className="w-4 h-4 mr-2" />
+                            Resume Interview
+                          </Button>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                       {/* Performance Scores */}
-                      {session.feedback && (
+                      {session.feedback && !isPausedSession(session) && (
                         <div>
                           <h4 className="font-semibold text-gray-900 mb-3 flex items-center">
                             <TrendingUp className="w-4 h-4 mr-2" />
@@ -202,19 +269,26 @@ const InterviewHistory = ({ onBack }: InterviewHistoryProps) => {
                         </h4>
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between">
-                            <span className="text-gray-600">Questions Answered:</span>
-                            <span className="font-medium">{session.questions.length}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Total Duration:</span>
-                            <span className="font-medium">{formatDuration(session.total_time)}</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-gray-600">Avg. per Question:</span>
+                            <span className="text-gray-600">Questions {isPausedSession(session) ? 'Answered' : 'Total'}:</span>
                             <span className="font-medium">
-                              {formatDuration(session.total_time / session.questions.length)}
+                              {isPausedSession(session) 
+                                ? `${(session.feedback?.currentQuestion || 0)} of ${session.questions.length}`
+                                : session.questions.length
+                              }
                             </span>
                           </div>
+                          <div className="flex justify-between">
+                            <span className="text-gray-600">Duration:</span>
+                            <span className="font-medium">{formatDuration(session.total_time)}</span>
+                          </div>
+                          {!isPausedSession(session) && (
+                            <div className="flex justify-between">
+                              <span className="text-gray-600">Avg. per Question:</span>
+                              <span className="font-medium">
+                                {formatDuration(session.total_time / session.questions.length)}
+                              </span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -229,20 +303,28 @@ const InterviewHistory = ({ onBack }: InterviewHistoryProps) => {
                               <span className="text-sm text-blue-600 font-medium">Question {index + 1}</span>
                               <p className="text-gray-900 mt-1">{qa.question}</p>
                             </div>
-                            <div className="bg-gray-50 p-3 rounded-lg">
-                              <span className="text-sm text-gray-600 font-medium">Your Answer:</span>
-                              <p className="text-gray-800 mt-1">{qa.answer}</p>
-                              <span className="text-xs text-gray-500">
-                                Time spent: {Math.floor(qa.timeSpent / 1000)} seconds
-                              </span>
-                            </div>
+                            {qa.answer ? (
+                              <div className="bg-gray-50 p-3 rounded-lg">
+                                <span className="text-sm text-gray-600 font-medium">Your Answer:</span>
+                                <p className="text-gray-800 mt-1">{qa.answer}</p>
+                                {qa.timeSpent && (
+                                  <span className="text-xs text-gray-500">
+                                    Time spent: {Math.floor(qa.timeSpent / 1000)} seconds
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="bg-yellow-50 p-3 rounded-lg border border-yellow-200">
+                                <span className="text-sm text-yellow-700 font-medium">Not answered yet</span>
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>
                     </div>
 
                     {/* Feedback Summary */}
-                    {session.feedback && (
+                    {session.feedback && !isPausedSession(session) && (
                       <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
                           <h4 className="font-semibold text-green-700 mb-2">Strengths</h4>
