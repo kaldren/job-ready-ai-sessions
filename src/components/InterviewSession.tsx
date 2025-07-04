@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -149,7 +148,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
         answers: currentAnswers,
         currentQuestion,
         questionTimes: currentTimes,
-        sessionStartTime: sessionStartTime.toISOString(), // Convert Date to string
+        sessionStartTime: sessionStartTime.toISOString(),
         isPaused: true,
         totalTime: Date.now() - sessionStartTime.getTime()
       }
@@ -162,6 +161,13 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
         throw new Error('User not authenticated')
       }
 
+      // Format questions properly for database storage
+      const formattedQuestions = questions.map((q, i) => ({
+        question: q,
+        answer: currentAnswers[i] || '',
+        timeSpent: currentTimes[i] || 0
+      }))
+
       const { error } = await supabase
         .from('interview_sessions')
         .insert({
@@ -169,18 +175,14 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
           job_title: jobData.title,
           job_level: jobData.level,
           job_industry: jobData.industry,
-          questions: questions.map((q, i) => ({
-            question: q,
-            answer: currentAnswers[i] || '',
-            timeSpent: currentTimes[i] || 0
-          })),
+          questions: formattedQuestions,
           total_time: Date.now() - sessionStartTime.getTime(),
           started_at: sessionStartTime.toISOString(),
           completed_at: new Date().toISOString(),
           feedback: { 
             paused: true,
             currentQuestion,
-            resumeData: pausedSessionData // Now properly serialized
+            resumeData: pausedSessionData
           }
         })
 
