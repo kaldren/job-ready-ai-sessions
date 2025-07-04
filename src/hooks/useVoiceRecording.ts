@@ -3,7 +3,11 @@ import { useState, useRef, useCallback } from 'react'
 import { useToast } from '@/hooks/use-toast'
 import { supabase } from '@/integrations/supabase/client'
 
-export const useVoiceRecording = () => {
+interface UseVoiceRecordingProps {
+  language?: string
+}
+
+export const useVoiceRecording = ({ language = 'en' }: UseVoiceRecordingProps = {}) => {
   const [isRecording, setIsRecording] = useState(false)
   const [isTranscribing, setIsTranscribing] = useState(false)
   const mediaRecorderRef = useRef<MediaRecorder | null>(null)
@@ -91,7 +95,10 @@ export const useVoiceRecording = () => {
               const base64Audio = (reader.result as string).split(',')[1]
               
               const { data, error } = await supabase.functions.invoke('transcribe-audio', {
-                body: { audio: base64Audio }
+                body: { 
+                  audio: base64Audio,
+                  language: language // Pass the selected language
+                }
               })
 
               if (error) {
@@ -127,7 +134,7 @@ export const useVoiceRecording = () => {
 
       mediaRecorderRef.current.stop()
     })
-  }, [toast])
+  }, [toast, language])
 
   const cancelRecording = useCallback(() => {
     if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {

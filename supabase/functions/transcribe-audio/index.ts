@@ -43,13 +43,13 @@ serve(async (req) => {
   }
 
   try {
-    const { audio } = await req.json()
+    const { audio, language = 'en' } = await req.json()
     
     if (!audio) {
       throw new Error('No audio data provided')
     }
 
-    console.log('Processing audio transcription request')
+    console.log('Processing audio transcription request for language:', language)
 
     // Process audio in chunks
     const binaryAudio = processBase64Chunks(audio)
@@ -59,6 +59,11 @@ serve(async (req) => {
     const blob = new Blob([binaryAudio], { type: 'audio/webm' })
     formData.append('file', blob, 'audio.webm')
     formData.append('model', 'whisper-1')
+    
+    // Add language parameter to improve transcription accuracy
+    if (language && language !== 'en') {
+      formData.append('language', language)
+    }
 
     // Send to OpenAI
     const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
@@ -76,7 +81,7 @@ serve(async (req) => {
     }
 
     const result = await response.json()
-    console.log('Transcription successful:', result.text?.substring(0, 100))
+    console.log('Transcription successful for language:', language, 'Text length:', result.text?.length)
 
     return new Response(
       JSON.stringify({ text: result.text }),

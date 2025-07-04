@@ -67,8 +67,10 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
   const { user: clerkUser } = useUser()
   const { selectedLanguage, t } = useLanguage()
   
-  // Voice recording functionality
-  const { isRecording, isTranscribing, startRecording, stopRecording, cancelRecording } = useVoiceRecording()
+  // Voice recording functionality - pass the selected language
+  const { isRecording, isTranscribing, startRecording, stopRecording, cancelRecording } = useVoiceRecording({
+    language: selectedLanguage.code
+  })
 
   useEffect(() => {
     if (resumeSession) {
