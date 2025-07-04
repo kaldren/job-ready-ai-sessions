@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { jobTitle, jobLevel, jobIndustry, question, answer } = await req.json()
+    const { jobTitle, jobLevel, jobIndustry, question, answer, language = 'en', languageName = 'English' } = await req.json()
     
     if (!answer || answer.trim().length < 10) {
       return new Response(
@@ -27,7 +27,13 @@ serve(async (req) => {
       throw new Error('OpenAI API key not found')
     }
 
+    const languageInstruction = language !== 'en' ? 
+      `Provide your feedback in ${languageName} language. Use natural, professional ${languageName}.` :
+      '';
+
     const prompt = `You are an experienced interview coach providing instant, constructive feedback on interview answers.
+
+${languageInstruction}
 
 Role Context:
 - Job Title: ${jobTitle}
@@ -45,7 +51,7 @@ Provide brief, actionable feedback (2-3 sentences max) focusing on:
 
 Keep it encouraging and constructive. Don't repeat the question or answer back.`
 
-    console.log('Generating instant feedback for:', { jobTitle, jobLevel, jobIndustry })
+    console.log('Generating instant feedback for:', { jobTitle, jobLevel, jobIndustry, language });
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -58,7 +64,7 @@ Keep it encouraging and constructive. Don't repeat the question or answer back.`
         messages: [
           {
             role: 'system',
-            content: 'You are an expert interview coach. Provide concise, actionable feedback that helps candidates improve their interview performance.'
+            content: `You are an expert interview coach. Provide concise, actionable feedback that helps candidates improve their interview performance. ${languageInstruction}`
           },
           {
             role: 'user',
@@ -83,7 +89,7 @@ Keep it encouraging and constructive. Don't repeat the question or answer back.`
       throw new Error('No feedback generated')
     }
 
-    console.log('Generated instant feedback successfully')
+    console.log('Generated instant feedback successfully in', languageName);
 
     return new Response(
       JSON.stringify({ feedback }),

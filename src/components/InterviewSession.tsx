@@ -12,6 +12,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useInterviewSessions } from '@/hooks/useInterviewSessions'
 import { useUser } from '@clerk/clerk-react'
 import { useVoiceRecording } from '@/hooks/useVoiceRecording'
+import { useLanguage } from '@/contexts/LanguageContext'
 
 interface InterviewSessionProps {
   jobData: JobData
@@ -62,6 +63,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
   const { toast } = useToast()
   const { saveSession } = useInterviewSessions()
   const { user: clerkUser } = useUser()
+  const { selectedLanguage } = useLanguage()
   
   // Voice recording functionality
   const { isRecording, isTranscribing, startRecording, stopRecording, cancelRecording } = useVoiceRecording()
@@ -81,13 +83,15 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
     const generateQuestions = async () => {
       setIsLoadingQuestions(true)
       try {
-        console.log('Generating questions for job data:', jobData)
+        console.log('Generating questions for job data:', jobData, 'in language:', selectedLanguage.nativeName)
         
         const { data, error } = await supabase.functions.invoke('generate-questions', {
           body: {
             jobTitle: jobData.title,
             level: jobData.level,
-            industry: jobData.industry
+            industry: jobData.industry,
+            language: selectedLanguage.code,
+            languageName: selectedLanguage.nativeName
           }
         })
 
@@ -100,13 +104,13 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
           throw new Error('Invalid response format from question generator')
         }
 
-        console.log(`Received ${data.questions.length} questions`)
+        console.log(`Received ${data.questions.length} questions in ${selectedLanguage.nativeName}`)
         setQuestions(data.questions)
         setQuestionStartTime(new Date())
         
         toast({
           title: "Questions Generated",
-          description: `Generated ${data.questions.length} personalized questions for your interview`,
+          description: `Generated ${data.questions.length} personalized questions in ${selectedLanguage.nativeName}`,
         })
 
       } catch (error) {
@@ -132,7 +136,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
     }
 
     generateQuestions()
-  }, [jobData, toast, resumeSession])
+  }, [jobData, toast, resumeSession, selectedLanguage])
 
   const generateInstantFeedback = async (question: string, userAnswer: string) => {
     if (!instantFeedbackEnabled || !userAnswer.trim()) return
@@ -145,7 +149,9 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
           jobLevel: jobData.level,
           jobIndustry: jobData.industry,
           question,
-          answer: userAnswer
+          answer: userAnswer,
+          language: selectedLanguage.code,
+          languageName: selectedLanguage.nativeName
         }
       })
 

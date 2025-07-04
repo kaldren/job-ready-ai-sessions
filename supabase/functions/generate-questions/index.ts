@@ -14,9 +14,9 @@ serve(async (req) => {
   }
 
   try {
-    const { jobTitle, level, industry } = await req.json();
+    const { jobTitle, level, industry, language = 'en', languageName = 'English' } = await req.json();
 
-    console.log('Request received:', { jobTitle, level, industry });
+    console.log('Request received:', { jobTitle, level, industry, language, languageName });
 
     if (!jobTitle || !level || !industry) {
       console.error('Missing required fields:', { jobTitle, level, industry });
@@ -35,9 +35,15 @@ serve(async (req) => {
       );
     }
 
-    console.log('Generating questions for:', { jobTitle, level, industry });
+    console.log('Generating questions for:', { jouTitle, level, industry, language });
+
+    const languageInstruction = language !== 'en' ? 
+      `Generate all questions in ${languageName} language. The questions should be natural and professional in ${languageName}.` :
+      '';
 
     const prompt = `You are an expert interviewer creating a comprehensive interview for a ${level} level ${jobTitle} position in the ${industry} industry.
+
+${languageInstruction}
 
 Generate exactly 35 interview questions that are:
 1. Appropriate for the ${level} experience level
@@ -69,7 +75,7 @@ Example format: ["Question 1 here", "Question 2 here", ...]`;
       body: JSON.stringify({
         model: 'gpt-4o',
         messages: [
-          { role: 'system', content: 'You are an expert interview coach and HR professional. Always respond with valid JSON arrays of interview questions.' },
+          { role: 'system', content: `You are an expert interview coach and HR professional. Always respond with valid JSON arrays of interview questions. ${languageInstruction}` },
           { role: 'user', content: prompt }
         ],
         temperature: 0.7,
@@ -130,7 +136,7 @@ Example format: ["Question 1 here", "Question 2 here", ...]`;
       );
     }
 
-    console.log(`Successfully generated ${questions.length} questions`);
+    console.log(`Successfully generated ${questions.length} questions in ${languageName}`);
 
     return new Response(
       JSON.stringify({ questions }),
