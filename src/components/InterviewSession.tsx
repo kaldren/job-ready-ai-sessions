@@ -137,8 +137,21 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
         currentTimes[currentQuestion] = timeSpent
       }
 
-      // Serialize the data properly for JSON storage
-      const pausedSessionData = {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (!user) {
+        throw new Error('User not authenticated')
+      }
+
+      // Format questions properly for database storage
+      const formattedQuestions = questions.map((q, i) => ({
+        question: q,
+        answer: currentAnswers[i] || '',
+        timeSpent: currentTimes[i] || 0
+      }))
+
+      // Create properly serialized resume data for the feedback field
+      const resumeData = {
         jobData: {
           title: jobData.title,
           level: jobData.level,
@@ -153,20 +166,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
         totalTime: Date.now() - sessionStartTime.getTime()
       }
 
-      console.log('Saving paused session:', pausedSessionData)
-
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) {
-        throw new Error('User not authenticated')
-      }
-
-      // Format questions properly for database storage
-      const formattedQuestions = questions.map((q, i) => ({
-        question: q,
-        answer: currentAnswers[i] || '',
-        timeSpent: currentTimes[i] || 0
-      }))
+      console.log('Saving paused session with resume data:', resumeData)
 
       const { error } = await supabase
         .from('interview_sessions')
@@ -182,7 +182,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
           feedback: { 
             paused: true,
             currentQuestion,
-            resumeData: pausedSessionData
+            resumeData
           }
         })
 
