@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -533,7 +532,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-2">
-                      <h4 ClassName="font-semibold text-purple-900 flex items-center space-x-2">
+                      <h4 className="font-semibold text-purple-900 flex items-center space-x-2">
                         <span>{t('AI Feedback')}</span>
                         {isLoadingFeedback && <Loader2 className="w-4 h-4 animate-spin" />}
                       </h4>
