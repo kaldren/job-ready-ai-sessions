@@ -19,6 +19,7 @@ export interface InterviewSessionData {
   completed_at: string
   feedback: any
   created_at: string
+  user_id: string
 }
 
 export const useInterviewSessions = () => {
@@ -32,22 +33,33 @@ export const useInterviewSessions = () => {
     try {
       if (!clerkUser) {
         console.log('No Clerk user, skipping session fetch')
+        setSessions([])
         setIsLoading(false)
         return
       }
 
-      const { data, error } = await supabase
+      console.log('Fetching sessions for Clerk user:', clerkUser.id)
+
+      // First try to fetch all sessions and filter client-side
+      const { data: allSessions, error } = await supabase
         .from('interview_sessions')
         .select('*')
-        .eq('user_id', clerkUser.id) // Filter by Clerk user ID
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        console.error('Supabase error:', error)
+        throw error
+      }
 
-      console.log('Fetched sessions from database:', data)
+      console.log('All sessions from database:', allSessions)
+
+      // Filter sessions for current user
+      const userSessions = (allSessions || []).filter(session => session.user_id === clerkUser.id)
+      
+      console.log('Filtered sessions for user:', userSessions)
 
       // Type assertion to handle the Json type from database
-      const typedData = (data || []).map(session => ({
+      const typedData = userSessions.map(session => ({
         ...session,
         questions: session.questions as Array<{
           question: string
@@ -60,6 +72,7 @@ export const useInterviewSessions = () => {
       setSessions(typedData)
     } catch (error) {
       console.error('Error fetching interview sessions:', error)
+      setSessions([]) // Set empty array on error instead of keeping previous state
       toast({
         title: "Error",
         description: "Failed to load interview history",
@@ -86,6 +99,7 @@ export const useInterviewSessions = () => {
 
       console.log('Saving session data:', sessionData)
       console.log('With feedback:', feedback)
+      console.log('Using Clerk user ID:', clerkUser.id)
 
       // Ensure questions are in the right format
       const formattedQuestions = sessionData.questions.map((q: any) => ({
@@ -95,7 +109,7 @@ export const useInterviewSessions = () => {
       }))
 
       const sessionToSave = {
-        user_id: clerkUser.id, // Use Clerk user ID
+        user_id: clerkUser.id, // Use Clerk user ID as string
         job_title: sessionData.jobData.title,
         job_level: sessionData.jobData.level,
         job_industry: sessionData.jobData.industry,
@@ -115,7 +129,7 @@ export const useInterviewSessions = () => {
 
       if (error) {
         console.error('Database error:', error)
-        throw error
+        throw new Error(`Database error: ${error.message}`)
       }
 
       console.log('Successfully saved session:', insertedData)
@@ -131,7 +145,7 @@ export const useInterviewSessions = () => {
       console.error('Error saving interview session:', error)
       toast({
         title: "Error",
-        description: "Failed to save interview session",
+        description: `Failed to save interview session: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       })
     } finally {
@@ -140,12 +154,8 @@ export const useInterviewSessions = () => {
   }
 
   useEffect(() => {
-    if (clerkUser) {
-      fetchSessions()
-    } else {
-      setIsLoading(false)
-    }
-  }, [clerkUser])
+    fetchSessions()
+  }, [clerkUser?.id]) // Depend on user ID specifically
 
   return {
     sessions,
