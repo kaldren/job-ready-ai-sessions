@@ -34,7 +34,18 @@ export const useInterviewSessions = () => {
 
       if (error) throw error
 
-      setSessions(data || [])
+      // Type assertion to handle the Json type from database
+      const typedData = (data || []).map(session => ({
+        ...session,
+        questions: session.questions as Array<{
+          question: string
+          answer: string
+          timeSpent: number
+        }>,
+        feedback: session.feedback as any
+      }))
+
+      setSessions(typedData)
     } catch (error) {
       console.error('Error fetching interview sessions:', error)
       toast({

@@ -1,14 +1,14 @@
-
 import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { Code, Users, TrendingUp, Palette, Shield, Stethoscope, Search, Building } from 'lucide-react'
+import { Code, Users, TrendingUp, Palette, Shield, Stethoscope, Search, Building, History } from 'lucide-react'
 
 interface JobSelectionProps {
   onJobSelected: (jobData: JobData) => void
+  onViewHistory: () => void
 }
 
 export interface JobData {
@@ -29,7 +29,7 @@ const jobCategories = [
   { icon: Search, title: "Data Scientist", color: "bg-orange-100 text-orange-600" },
 ]
 
-const JobSelection = ({ onJobSelected }: JobSelectionProps) => {
+const JobSelection = ({ onJobSelected, onViewHistory }: JobSelectionProps) => {
   const [selectedJob, setSelectedJob] = useState<string>('')
   const [customJob, setCustomJob] = useState<string>('')
   const [level, setLevel] = useState<string>('')
@@ -56,6 +56,16 @@ const JobSelection = ({ onJobSelected }: JobSelectionProps) => {
       <div className="text-center mb-8">
         <h2 className="text-3xl font-bold text-gray-900 mb-4">What's your target role?</h2>
         <p className="text-lg text-gray-600">Tell us about the position you're preparing for</p>
+        <div className="mt-4">
+          <Button 
+            variant="outline" 
+            onClick={onViewHistory}
+            className="text-blue-600 border-blue-200 hover:bg-blue-50"
+          >
+            <History className="w-4 h-4 mr-2" />
+            View Interview History
+          </Button>
+        </div>
       </div>
 
       <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-sm">
