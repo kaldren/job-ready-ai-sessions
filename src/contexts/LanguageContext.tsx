@@ -261,14 +261,14 @@ const translations = {
   },
   bg: {
     // Main Page
-    'AI Interview Practice': 'Практика за интервю с ИИ',
-    'Master your next interview with personalized AI feedback and real-time coaching': 'Овладейте следващото си интервю с персонализирана обратна връзка от ИИ и коучинг в реalno време',
+    'AI Interview Practice': 'Практика за интервю с AI',
+    'Master your next interview with personalized AI feedback and real-time coaching': 'Овладейте следващото си интервю с персонализирана обратна връзка от AI в реalno време',
     'Tell us about the role': 'Разкажете ни за позицията',
     'We\'ll customize your interview experience based on this information': 'Ще персонализираме вашето интервю въз основа на тази информация',
     'Job Title': 'Длъжност',
     'Industry': 'Индустрия',
     'Experience Level': 'Ниво на опит',
-    'Start Your AI Interview': 'Започнете вашето ИИ интервю',
+    'Start Your AI Interview': 'Започнете вашето AI интервю',
     'View Interview History': 'Преглед на история на интервютата',
     'Entry Level (0-2 years)': 'Начално ниво (0-2 години)',
     'Mid Level (2-5 years)': 'Средно ниво (2-5 години)',
