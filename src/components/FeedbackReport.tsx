@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { SessionData } from './InterviewSession'
 import { supabase } from '@/integrations/supabase/client'
-import { useToast } from '@/components/ui/use-toast'
+import { useToast } from '@/hooks/use-toast'
 import { useInterviewSessions } from '@/hooks/useInterviewSessions'
 
 interface FeedbackReportProps {
@@ -43,6 +43,7 @@ const FeedbackReport = ({ sessionData, onStartNew }: FeedbackReportProps) => {
   const [feedback, setFeedback] = useState<AIFeedback | null>(null)
   const [isLoadingFeedback, setIsLoadingFeedback] = useState(true)
   const [sessionSaved, setSessionSaved] = useState(false)
+  const feedbackGenerated = useRef(false)
   const { toast } = useToast()
   const { saveSession } = useInterviewSessions()
 
@@ -51,8 +52,13 @@ const FeedbackReport = ({ sessionData, onStartNew }: FeedbackReportProps) => {
   const totalMinutes = Math.floor(sessionData.totalTime / 1000 / 60)
 
   useEffect(() => {
+    // Prevent multiple feedback generation attempts
+    if (feedbackGenerated.current) return
+
     const generateFeedback = async () => {
+      feedbackGenerated.current = true
       setIsLoadingFeedback(true)
+      
       try {
         console.log('Generating AI feedback for session:', sessionData)
         
@@ -91,6 +97,8 @@ const FeedbackReport = ({ sessionData, onStartNew }: FeedbackReportProps) => {
 
       } catch (error) {
         console.error('Error generating feedback:', error)
+        
+        // Show error toast only once
         toast({
           title: "Error",
           description: "Failed to generate personalized feedback. Using default analysis.",
@@ -139,8 +147,12 @@ const FeedbackReport = ({ sessionData, onStartNew }: FeedbackReportProps) => {
         
         // Save session with fallback feedback
         if (!sessionSaved) {
-          await saveSession(sessionData, fallbackFeedback)
-          setSessionSaved(true)
+          try {
+            await saveSession(sessionData, fallbackFeedback)
+            setSessionSaved(true)
+          } catch (saveError) {
+            console.error('Error saving session:', saveError)
+          }
         }
       } finally {
         setIsLoadingFeedback(false)
@@ -148,7 +160,7 @@ const FeedbackReport = ({ sessionData, onStartNew }: FeedbackReportProps) => {
     }
 
     generateFeedback()
-  }, [sessionData, toast, saveSession, sessionSaved])
+  }, []) // Empty dependency array to run only once
 
   const formatTime = (ms: number) => {
     const seconds = Math.floor(ms / 1000)

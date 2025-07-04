@@ -1,7 +1,7 @@
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/integrations/supabase/client'
-import { useToast } from '@/components/ui/use-toast'
+import { useToast } from '@/hooks/use-toast'
 
 export interface InterviewSessionData {
   id: string
@@ -24,6 +24,7 @@ export const useInterviewSessions = () => {
   const [sessions, setSessions] = useState<InterviewSessionData[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
+  const saveInProgress = useRef(false)
 
   const fetchSessions = async () => {
     try {
@@ -59,6 +60,14 @@ export const useInterviewSessions = () => {
   }
 
   const saveSession = async (sessionData: any, feedback: any) => {
+    // Prevent duplicate saves
+    if (saveInProgress.current) {
+      console.log('Save already in progress, skipping...')
+      return
+    }
+
+    saveInProgress.current = true
+
     try {
       const { data: { user } } = await supabase.auth.getUser()
       
@@ -96,6 +105,8 @@ export const useInterviewSessions = () => {
         description: "Failed to save interview session",
         variant: "destructive",
       })
+    } finally {
+      saveInProgress.current = false
     }
   }
 
