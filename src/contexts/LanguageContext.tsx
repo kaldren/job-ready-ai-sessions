@@ -22,6 +22,7 @@ export const SUPPORTED_LANGUAGES: Language[] = [
   { code: 'ko', name: 'Korean', nativeName: '한국어', flag: '🇰🇷', country: 'South Korea' },
   { code: 'ar', name: 'Arabic', nativeName: 'العربية', flag: '🇸🇦', country: 'Saudi Arabia' },
   { code: 'hi', name: 'Hindi', nativeName: 'हिन्दी', flag: '🇮🇳', country: 'India' },
+  { code: 'bg', name: 'Bulgarian', nativeName: 'Български', flag: '🇧🇬', country: 'Bulgaria' },
 ]
 
 interface LanguageContextType {
