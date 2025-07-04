@@ -1,3 +1,4 @@
+
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -8,6 +9,7 @@ import { Switch } from '@/components/ui/switch'
 import { Badge } from '@/components/ui/badge'
 import { Briefcase, Building, User, Play, Zap } from 'lucide-react'
 import { useLanguage } from '@/contexts/LanguageContext'
+import LanguageSelector from '@/components/LanguageSelector'
 
 export interface JobData {
   title: string
@@ -42,6 +44,11 @@ const JobSelection = ({ onJobSelect, onViewHistory }: JobSelectionProps) => {
 
   return (
     <div className="max-w-2xl mx-auto">
+      {/* Language Selector at the top */}
+      <div className="flex justify-end mb-4">
+        <LanguageSelector />
+      </div>
+      
       <Card className="shadow-xl border-0 bg-white/90 backdrop-blur-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold text-gray-900 mb-2">
