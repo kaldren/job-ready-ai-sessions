@@ -53,6 +53,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
   const [questionTimes, setQuestionTimes] = useState<number[]>(resumeSession?.questionTimes || [])
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(!resumeSession)
   const [isPaused, setIsPaused] = useState(false)
+  const [pausedSessionId, setPausedSessionId] = useState<string | null>(resumeSession?.id || null)
   const { toast } = useToast()
   const { saveSession } = useInterviewSessions()
   const { user: clerkUser } = useUser()
@@ -179,8 +180,8 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
 
       console.log('Resume data prepared:', resumeData)
 
-      const sessionToInsert = {
-        user_id: clerkUser.id, // Use Clerk user ID
+      const sessionData = {
+        user_id: clerkUser.id,
         job_title: jobData.title,
         job_level: jobData.level,
         job_industry: jobData.industry,
@@ -195,15 +196,31 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
         }
       }
 
-      console.log('Session data to insert:', JSON.stringify(sessionToInsert, null, 2))
+      console.log('Session data prepared:', JSON.stringify(sessionData, null, 2))
 
-      const { data: insertedData, error } = await supabase
-        .from('interview_sessions')
-        .insert(sessionToInsert)
-        .select()
+      let result;
+      if (pausedSessionId) {
+        // Update existing paused session
+        console.log('Updating existing paused session with ID:', pausedSessionId)
+        result = await supabase
+          .from('interview_sessions')
+          .update(sessionData)
+          .eq('id', pausedSessionId)
+          .eq('user_id', clerkUser.id)
+          .select()
+      } else {
+        // Create new paused session
+        console.log('Creating new paused session')
+        result = await supabase
+          .from('interview_sessions')
+          .insert(sessionData)
+          .select()
+      }
+
+      const { data: sessionResult, error } = result
 
       if (error) {
-        console.error('Database insertion error:', error)
+        console.error('Database operation error:', error)
         console.error('Error details:', {
           message: error.message,
           details: error.details,
@@ -213,11 +230,18 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
         throw new Error(`Database error: ${error.message}`)
       }
 
-      console.log('Successfully inserted session:', insertedData)
+      console.log('Successfully saved/updated session:', sessionResult)
+
+      // Store the session ID for future updates
+      if (sessionResult && sessionResult[0]) {
+        setPausedSessionId(sessionResult[0].id)
+      }
 
       toast({
         title: "Session Paused",
-        description: "Your interview has been saved and can be resumed from history",
+        description: pausedSessionId 
+          ? "Your interview progress has been updated" 
+          : "Your interview has been saved and can be resumed from history",
       })
 
       setIsPaused(true)
