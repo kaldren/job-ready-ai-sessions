@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
-import { Mic, MicOff, Send, Clock, User, Bot, Loader2, Pause, Play } from 'lucide-react'
+import { Switch } from '@/components/ui/switch'
+import { Mic, MicOff, Send, Clock, User, Bot, Loader2, Pause, Play, MessageSquare, Zap } from 'lucide-react'
 import { JobData } from './JobSelection'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
@@ -41,6 +42,7 @@ interface QuestionAnswer {
   question: string
   answer: string
   timeSpent: number
+  instantFeedback?: string
 }
 
 const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: InterviewSessionProps) => {
@@ -54,6 +56,9 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
   const [isLoadingQuestions, setIsLoadingQuestions] = useState(!resumeSession)
   const [isPaused, setIsPaused] = useState(false)
   const [pausedSessionId, setPausedSessionId] = useState<string | null>(resumeSession?.id || null)
+  const [instantFeedbackEnabled, setInstantFeedbackEnabled] = useState(false)
+  const [instantFeedback, setInstantFeedback] = useState<string>('')
+  const [isLoadingFeedback, setIsLoadingFeedback] = useState(false)
   const { toast } = useToast()
   const { saveSession } = useInterviewSessions()
   const { user: clerkUser } = useUser()
@@ -128,6 +133,47 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
 
     generateQuestions()
   }, [jobData, toast, resumeSession])
+
+  const generateInstantFeedback = async (question: string, userAnswer: string) => {
+    if (!instantFeedbackEnabled || !userAnswer.trim()) return
+
+    setIsLoadingFeedback(true)
+    try {
+      const { data, error } = await supabase.functions.invoke('generate-instant-feedback', {
+        body: {
+          jobTitle: jobData.title,
+          jobLevel: jobData.level,
+          jobIndustry: jobData.industry,
+          question,
+          answer: userAnswer
+        }
+      })
+
+      if (error) {
+        console.error('Error generating instant feedback:', error)
+        return
+      }
+
+      if (data?.feedback) {
+        setInstantFeedback(data.feedback)
+      }
+    } catch (error) {
+      console.error('Error generating instant feedback:', error)
+    } finally {
+      setIsLoadingFeedback(false)
+    }
+  }
+
+  // Generate feedback when answer changes (debounced)
+  useEffect(() => {
+    if (!instantFeedbackEnabled || !answer.trim() || isLoadingQuestions) return
+
+    const timeoutId = setTimeout(() => {
+      generateInstantFeedback(questions[currentQuestion], answer)
+    }, 2000) // 2 second delay after user stops typing
+
+    return () => clearTimeout(timeoutId)
+  }, [answer, instantFeedbackEnabled, questions, currentQuestion, isLoadingQuestions])
 
   const progress = questions.length > 0 ? ((currentQuestion + 1) / questions.length) * 100 : 0
 
@@ -268,6 +314,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
     setAnswers(newAnswers)
     setQuestionTimes(newTimes)
     setAnswer('')
+    setInstantFeedback('') // Clear feedback for next question
 
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1)
@@ -279,7 +326,8 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
         questions: questions.map((q, i) => ({
           question: q,
           answer: newAnswers[i] || '',
-          timeSpent: newTimes[i] || 0
+          timeSpent: newTimes[i] || 0,
+          instantFeedback: i === currentQuestion ? instantFeedback : undefined
         })),
         totalTime: Date.now() - sessionStartTime.getTime(),
         startTime: sessionStartTime,
@@ -411,6 +459,21 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
             </div>
           </div>
           <Progress value={progress} className="mt-2" />
+          
+          {/* Instant Feedback Toggle */}
+          <div className="flex items-center justify-between mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
+            <div className="flex items-center space-x-2">
+              <Zap className="w-4 h-4 text-amber-600" />
+              <span className="text-sm font-medium text-amber-800">Instant AI Feedback</span>
+              <Badge variant="secondary" className="text-xs bg-amber-100 text-amber-700">
+                Real-time
+              </Badge>
+            </div>
+            <Switch
+              checked={instantFeedbackEnabled}
+              onCheckedChange={setInstantFeedbackEnabled}
+            />
+          </div>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="bg-gradient-to-r from-blue-50 to-green-50 p-6 rounded-xl border border-blue-100">
@@ -441,6 +504,30 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
               onChange={(e) => setAnswer(e.target.value)}
               className="min-h-32 text-base leading-relaxed"
             />
+
+            {/* Instant Feedback Display */}
+            {instantFeedbackEnabled && (answer.trim() || isLoadingFeedback) && (
+              <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-xl border border-purple-200">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-r from-purple-600 to-pink-600 rounded-full flex items-center justify-center">
+                    <MessageSquare className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="flex-1">
+                    <h4 className="font-semibold text-purple-900 mb-2 flex items-center space-x-2">
+                      <span>AI Feedback</span>
+                      {isLoadingFeedback && <Loader2 className="w-4 h-4 animate-spin" />}
+                    </h4>
+                    {isLoadingFeedback ? (
+                      <p className="text-purple-700 italic">Analyzing your response...</p>
+                    ) : instantFeedback ? (
+                      <p className="text-purple-800 leading-relaxed">{instantFeedback}</p>
+                    ) : (
+                      <p className="text-purple-700 italic">Start typing to get instant feedback on your answer...</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center justify-between">
               <Button
