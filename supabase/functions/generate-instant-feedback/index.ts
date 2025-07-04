@@ -27,8 +27,9 @@ serve(async (req) => {
       throw new Error('OpenAI API key not found')
     }
 
+    // Enhanced language instruction for complete language consistency
     const languageInstruction = language !== 'en' ? 
-      `Provide your feedback in ${languageName} language. Use natural, professional ${languageName}.` :
+      `CRITICAL: You MUST provide your feedback entirely in ${languageName} language. Do not mix languages. Every single word must be in ${languageName}. Write naturally as a native ${languageName} speaker would.` :
       '';
 
     const prompt = `You are an experienced interview coach providing instant, constructive feedback on interview answers.
@@ -49,7 +50,7 @@ Provide brief, actionable feedback (2-3 sentences max) focusing on:
 2. One specific area for improvement
 3. A quick tip to strengthen their response
 
-Keep it encouraging and constructive. Don't repeat the question or answer back.`
+Keep it encouraging and constructive. Don't repeat the question or answer back.`;
 
     console.log('Generating instant feedback for:', { jobTitle, jobLevel, jobIndustry, language });
 
@@ -64,7 +65,7 @@ Keep it encouraging and constructive. Don't repeat the question or answer back.`
         messages: [
           {
             role: 'system',
-            content: `You are an expert interview coach. Provide concise, actionable feedback that helps candidates improve their interview performance. ${languageInstruction}`
+            content: `You are an expert interview coach. You MUST provide concise, actionable feedback that helps candidates improve their interview performance. ${languageInstruction}`
           },
           {
             role: 'user',

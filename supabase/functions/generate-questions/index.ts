@@ -35,10 +35,11 @@ serve(async (req) => {
       );
     }
 
-    console.log('Generating questions for:', { jouTitle, level, industry, language });
+    console.log('Generating questions for:', { jobTitle, level, industry, language });
 
+    // Enhanced language instruction that ensures complete language consistency
     const languageInstruction = language !== 'en' ? 
-      `Generate all questions in ${languageName} language. The questions should be natural and professional in ${languageName}.` :
+      `CRITICAL: You MUST generate ALL questions entirely in ${languageName} language. Do not mix languages. Every single word, including job titles, industries, and all content must be in ${languageName}. Write naturally as a native ${languageName} speaker would.` :
       '';
 
     const prompt = `You are an expert interviewer creating a comprehensive interview for a ${level} level ${jobTitle} position in the ${industry} industry.
@@ -75,7 +76,10 @@ Example format: ["Question 1 here", "Question 2 here", ...]`;
       body: JSON.stringify({
         model: 'gpt-4o',
         messages: [
-          { role: 'system', content: `You are an expert interview coach and HR professional. Always respond with valid JSON arrays of interview questions. ${languageInstruction}` },
+          { 
+            role: 'system', 
+            content: `You are an expert interview coach and HR professional. You MUST respond with valid JSON arrays of interview questions. ${languageInstruction}` 
+          },
           { role: 'user', content: prompt }
         ],
         temperature: 0.7,
