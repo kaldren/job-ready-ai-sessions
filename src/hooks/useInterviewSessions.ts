@@ -1,7 +1,7 @@
-
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
+import { useUser } from '@clerk/clerk-react'
 
 export interface InterviewSessionData {
   id: string
@@ -25,12 +25,20 @@ export const useInterviewSessions = () => {
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
   const saveInProgress = useRef(false)
+  const { user: clerkUser } = useUser()
 
   const fetchSessions = async () => {
     try {
+      if (!clerkUser) {
+        console.log('No Clerk user, skipping session fetch')
+        setIsLoading(false)
+        return
+      }
+
       const { data, error } = await supabase
         .from('interview_sessions')
         .select('*')
+        .eq('user_id', clerkUser.id) // Filter by Clerk user ID
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -71,9 +79,7 @@ export const useInterviewSessions = () => {
     saveInProgress.current = true
 
     try {
-      const { data: { user } } = await supabase.auth.getUser()
-      
-      if (!user) {
+      if (!clerkUser) {
         throw new Error('User not authenticated')
       }
 
@@ -88,7 +94,7 @@ export const useInterviewSessions = () => {
       }))
 
       const sessionToSave = {
-        user_id: user.id,
+        user_id: clerkUser.id, // Use Clerk user ID
         job_title: sessionData.jobData.title,
         job_level: sessionData.jobData.level,
         job_industry: sessionData.jobData.industry,
@@ -133,8 +139,12 @@ export const useInterviewSessions = () => {
   }
 
   useEffect(() => {
-    fetchSessions()
-  }, [])
+    if (clerkUser) {
+      fetchSessions()
+    } else {
+      setIsLoading(false)
+    }
+  }, [clerkUser])
 
   return {
     sessions,

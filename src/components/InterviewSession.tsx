@@ -9,6 +9,7 @@ import { JobData } from './JobSelection'
 import { supabase } from '@/integrations/supabase/client'
 import { useToast } from '@/hooks/use-toast'
 import { useInterviewSessions } from '@/hooks/useInterviewSessions'
+import { useUser } from '@clerk/clerk-react'
 
 interface InterviewSessionProps {
   jobData: JobData
@@ -54,6 +55,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
   const [isPaused, setIsPaused] = useState(false)
   const { toast } = useToast()
   const { saveSession } = useInterviewSessions()
+  const { user: clerkUser } = useUser()
 
   useEffect(() => {
     if (resumeSession) {
@@ -142,19 +144,13 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
       console.log('Current answers:', currentAnswers)
       console.log('Current times:', currentTimes)
 
-      const { data: { user }, error: authError } = await supabase.auth.getUser()
-      
-      if (authError) {
-        console.error('Auth error:', authError)
-        throw new Error(`Authentication error: ${authError.message}`)
-      }
-      
-      if (!user) {
-        console.error('No user found')
+      // Use Clerk user instead of Supabase auth
+      if (!clerkUser) {
+        console.error('No Clerk user found')
         throw new Error('User not authenticated')
       }
 
-      console.log('User authenticated:', user.id)
+      console.log('Clerk user authenticated:', clerkUser.id)
 
       // Format questions properly for database storage
       const formattedQuestions = questions.map((q, i) => ({
@@ -184,7 +180,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
       console.log('Resume data prepared:', resumeData)
 
       const sessionToInsert = {
-        user_id: user.id,
+        user_id: clerkUser.id, // Use Clerk user ID
         job_title: jobData.title,
         job_level: jobData.level,
         job_industry: jobData.industry,
