@@ -127,6 +127,8 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
 
   const handlePauseSession = async () => {
     try {
+      console.log('Starting pause session process...')
+      
       const timeSpent = Date.now() - questionStartTime.getTime()
       const currentAnswers = [...answers]
       const currentTimes = [...questionTimes]
@@ -137,11 +139,22 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
         currentTimes[currentQuestion] = timeSpent
       }
 
-      const { data: { user } } = await supabase.auth.getUser()
+      console.log('Current answers:', currentAnswers)
+      console.log('Current times:', currentTimes)
+
+      const { data: { user }, error: authError } = await supabase.auth.getUser()
+      
+      if (authError) {
+        console.error('Auth error:', authError)
+        throw new Error(`Authentication error: ${authError.message}`)
+      }
       
       if (!user) {
+        console.error('No user found')
         throw new Error('User not authenticated')
       }
+
+      console.log('User authenticated:', user.id)
 
       // Format questions properly for database storage
       const formattedQuestions = questions.map((q, i) => ({
@@ -149,6 +162,8 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
         answer: currentAnswers[i] || '',
         timeSpent: currentTimes[i] || 0
       }))
+
+      console.log('Formatted questions:', formattedQuestions)
 
       // Create properly serialized resume data for the feedback field
       const resumeData = {
@@ -166,30 +181,43 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
         totalTime: Date.now() - sessionStartTime.getTime()
       }
 
-      console.log('Saving paused session with resume data:', resumeData)
+      console.log('Resume data prepared:', resumeData)
 
-      const { error } = await supabase
+      const sessionToInsert = {
+        user_id: user.id,
+        job_title: jobData.title,
+        job_level: jobData.level,
+        job_industry: jobData.industry,
+        questions: formattedQuestions,
+        total_time: Date.now() - sessionStartTime.getTime(),
+        started_at: sessionStartTime.toISOString(),
+        completed_at: new Date().toISOString(),
+        feedback: { 
+          paused: true,
+          currentQuestion,
+          resumeData
+        }
+      }
+
+      console.log('Session data to insert:', JSON.stringify(sessionToInsert, null, 2))
+
+      const { data: insertedData, error } = await supabase
         .from('interview_sessions')
-        .insert({
-          user_id: user.id,
-          job_title: jobData.title,
-          job_level: jobData.level,
-          job_industry: jobData.industry,
-          questions: formattedQuestions,
-          total_time: Date.now() - sessionStartTime.getTime(),
-          started_at: sessionStartTime.toISOString(),
-          completed_at: new Date().toISOString(),
-          feedback: { 
-            paused: true,
-            currentQuestion,
-            resumeData
-          }
-        })
+        .insert(sessionToInsert)
+        .select()
 
       if (error) {
-        console.error('Error saving paused session:', error)
-        throw error
+        console.error('Database insertion error:', error)
+        console.error('Error details:', {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        })
+        throw new Error(`Database error: ${error.message}`)
       }
+
+      console.log('Successfully inserted session:', insertedData)
 
       toast({
         title: "Session Paused",
@@ -199,10 +227,11 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
       setIsPaused(true)
       
     } catch (error) {
-      console.error('Error pausing session:', error)
+      console.error('Error in handlePauseSession:', error)
+      console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
       toast({
         title: "Error",
-        description: "Failed to pause session",
+        description: `Failed to pause session: ${error instanceof Error ? error.message : 'Unknown error'}`,
         variant: "destructive",
       })
     }
