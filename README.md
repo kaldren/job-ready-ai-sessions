@@ -1,73 +1,94 @@
-# Welcome to your Lovable project
 
-## Project info
+# AI Interview Practice
 
-**URL**: https://lovable.dev/projects/88146a39-110f-4505-86ca-cd949cbf65a0
+A web application for practicing job interviews with AI-generated questions tailored to your role, experience level, and industry.
 
-## How can I edit this code?
+## Features
 
-There are several ways of editing your application.
+- Personalized interview questions based on job title, level, and industry
+- Real-time interview sessions with pause/resume functionality
+- Interview history and progress tracking
+- AI-powered feedback and analysis
+- User authentication and session management
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/88146a39-110f-4505-86ca-cd949cbf65a0) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
+## Technologies Used
 
 This project is built with:
 
-- Vite
-- TypeScript
 - React
-- shadcn-ui
+- TypeScript
+- Vite
 - Tailwind CSS
+- Shadcn UI
+- Supabase (Backend & Database)
+- Clerk (Authentication)
 
-## How can I deploy this project?
+## Getting Started
 
-Simply open [Lovable](https://lovable.dev/projects/88146a39-110f-4505-86ca-cd949cbf65a0) and click on Share -> Publish.
+### Prerequisites
 
-## Can I connect a custom domain to my Lovable project?
+- Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
-Yes, you can!
+### Installation
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+1. Clone the repository
+```sh
+git clone <YOUR_GIT_URL>
+```
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+2. Navigate to the project directory
+```sh
+cd <YOUR_PROJECT_NAME>
+```
+
+3. Install dependencies
+```sh
+npm install
+```
+
+4. Start the development server
+```sh
+npm run dev
+```
+
+## Configuration
+
+### Environment Variables
+
+You'll need to set up the following services and add their keys to your environment:
+
+1. **Clerk Authentication**: Get your publishable key from [Clerk Dashboard](https://clerk.com)
+2. **Supabase**: Set up your Supabase project for database and API functions
+
+### Database Setup
+
+The application uses Supabase for data storage. Run the included migrations to set up the database schema.
+
+## Usage
+
+1. Sign up or log in to your account
+2. Select your target job title, experience level, and industry
+3. Start an interview session with AI-generated questions
+4. Answer questions at your own pace
+5. Pause and resume sessions as needed
+6. Review your interview history and feedback
+
+## Deployment
+
+The application can be deployed to any static hosting service that supports React applications, such as:
+
+- Vercel
+- Netlify
+- GitHub Pages
+- Any other static hosting provider
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## License
+
+This project is open source and available under the MIT License.
