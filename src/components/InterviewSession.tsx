@@ -61,6 +61,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
   const [isLoadingFeedback, setIsLoadingFeedback] = useState(false)
   const [hasFeedbackBeenGenerated, setHasFeedbackBeenGenerated] = useState(false)
   const [hasUsedVoiceForCurrentQuestion, setHasUsedVoiceForCurrentQuestion] = useState(false)
+  const [voiceTimeoutId, setVoiceTimeoutId] = useState<NodeJS.Timeout | null>(null)
   const { toast } = useToast()
   const { saveSession } = useInterviewSessions()
   const { user: clerkUser } = useUser()
@@ -318,6 +319,12 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
     setHasFeedbackBeenGenerated(false) // Reset feedback state for next question
     setHasUsedVoiceForCurrentQuestion(false) // Reset voice usage for next question
 
+    // Clear any existing voice timeout
+    if (voiceTimeoutId) {
+      clearTimeout(voiceTimeoutId)
+      setVoiceTimeoutId(null)
+    }
+
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1)
       setQuestionStartTime(new Date())
@@ -344,7 +351,17 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
     
     if (isRecording) {
       // User clicked to stop recording manually
+      console.log('User manually stopping recording...')
+      
+      // Clear the timeout since user stopped manually
+      if (voiceTimeoutId) {
+        clearTimeout(voiceTimeoutId)
+        setVoiceTimeoutId(null)
+      }
+      
       const transcribedText = await stopRecording()
+      console.log('Manual stop - transcribed text:', transcribedText)
+      
       if (transcribedText) {
         // Add transcribed text to existing answer (don't overwrite)
         setAnswer(prev => prev ? `${prev} ${transcribedText}` : transcribedText)
@@ -352,26 +369,34 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
       setHasUsedVoiceForCurrentQuestion(true) // Disable voice button after use
     } else {
       // Start recording with 20-second auto-stop
+      console.log('Starting voice recording...')
       const started = await startRecording()
       if (!started) {
         return
       }
       
       // Auto-stop after 20 seconds
-      setTimeout(async () => {
+      const timeoutId = setTimeout(async () => {
+        console.log('20-second timeout reached, stopping recording...')
         if (isRecording) {
           const transcribedText = await stopRecording()
+          console.log('Auto-stop - transcribed text:', transcribedText)
+          
           if (transcribedText) {
             // Add transcribed text to existing answer (don't overwrite)
             setAnswer(prev => prev ? `${prev} ${transcribedText}` : transcribedText)
           }
           setHasUsedVoiceForCurrentQuestion(true) // Disable voice button after auto-stop
+          setVoiceTimeoutId(null) // Clear timeout reference
+          
           toast({
             title: t("Recording Complete"),
             description: t("20-second voice recording completed. Text has been added to your answer."),
           })
         }
       }, 20000)
+      
+      setVoiceTimeoutId(timeoutId)
     }
   }
 
