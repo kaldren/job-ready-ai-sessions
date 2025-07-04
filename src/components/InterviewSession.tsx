@@ -138,13 +138,18 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
         currentTimes[currentQuestion] = timeSpent
       }
 
+      // Serialize the data properly for JSON storage
       const pausedSessionData = {
-        jobData,
+        jobData: {
+          title: jobData.title,
+          level: jobData.level,
+          industry: jobData.industry
+        },
         questions,
         answers: currentAnswers,
         currentQuestion,
         questionTimes: currentTimes,
-        sessionStartTime,
+        sessionStartTime: sessionStartTime.toISOString(), // Convert Date to string
         isPaused: true,
         totalTime: Date.now() - sessionStartTime.getTime()
       }
@@ -175,7 +180,7 @@ const InterviewSession = ({ jobData, onSessionComplete, resumeSession }: Intervi
           feedback: { 
             paused: true,
             currentQuestion,
-            resumeData: pausedSessionData
+            resumeData: pausedSessionData // Now properly serialized
           }
         })
 
